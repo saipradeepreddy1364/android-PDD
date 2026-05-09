@@ -195,10 +195,24 @@ const Signup = () => {
       return;
     }
 
-    setLoading(true);
-
     try {
-      // 1. Check if user exists but is unverified
+      // 1. Check for duplicate Organization name if signing up as organization
+      if (authType === "organization") {
+        const { data: existingOrg } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('role', 'organization')
+          .eq('full_name', formData.name)
+          .maybeSingle();
+        
+        if (existingOrg) {
+          showAlert("Organization Exists", "An organization with this name is already registered. Please login or use a different name.");
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 2. Check if user exists but is unverified
       // We attempt a signup - if it fails with 'already registered', 
       // we know we might need to clean up.
       let { data, error } = await supabase.auth.signUp({
@@ -248,6 +262,7 @@ const Signup = () => {
         const profileData = {
           id: data.session.user.id,
           full_name: formData.name,
+          email: formData.email,
           phone: formData.phone,
           role: authType,
           status: authType === "organization" ? "approved" : "pending", // Doctors stay pending

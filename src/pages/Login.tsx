@@ -67,7 +67,18 @@ const Login = () => {
 
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
-          showAlert("Login Failed", "Incorrect email or password. Please try again.");
+          // Check if email actually exists in our profiles
+          const { data: profileCheck } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', trimmedEmail)
+            .maybeSingle();
+          
+          if (!profileCheck) {
+            showAlert("Login Failed", "Email not found. Please register to login.");
+          } else {
+            showAlert("Login Failed", "Incorrect password. Please try again.");
+          }
         } else if (error.message.includes("Email not confirmed")) {
           showAlert("Email Verification Required", "Please create your account again and verify your email to sign in.");
         } else {
@@ -149,12 +160,7 @@ const Login = () => {
                   style={styles.passwordInput}
                   placeholder="••••••••"
                   value={password}
-                  onChangeText={(v) => {
-                    setPassword(v);
-                    if (v.length === 6 && email.includes("@")) {
-                      handleLogin();
-                    }
-                  }}
+                  onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                   placeholderTextColor="#94A3B8"
                 />
