@@ -17,6 +17,12 @@ const SplashScreen = () => {
           const { data: { session } } = await supabase.auth.getSession();
           if (!session) return { session: null, role: null };
 
+          // HARD LOCK: If email is not confirmed, they MUST NOT stay logged in
+          if (!session.user.email_confirmed_at) {
+            await supabase.auth.signOut();
+            return { session: null, role: null };
+          }
+
           const { data: profile } = await supabase
             .from('profiles')
             .select('*')

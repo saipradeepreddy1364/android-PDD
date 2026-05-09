@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, SafeAreaView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, SafeAreaView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Modal } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Stethoscope, Loader2, ArrowLeft, ShieldCheck, Eye, EyeOff } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
@@ -21,6 +21,9 @@ const DoctorLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [verifying, setVerifying] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -40,7 +43,18 @@ const DoctorLogin = () => {
           // Standard check as email column is not available in profiles schema
           showAlert("Login Failed", "Incorrect email or password. Please ensure you have been approved by your organization.");
         } else if (error.message.toLowerCase().includes("email not confirmed")) {
-          showAlert("Email Verification Required", "Please create your account again and verify your email to sign in.");
+          setLoading(true);
+          const { error: resendError } = await supabase.auth.resend({
+            type: 'signup',
+            email: email,
+          });
+          setLoading(false);
+          
+          if (!resendError) {
+            setShowVerifyModal(true);
+          } else {
+            showAlert("Verification Error", resendError.message);
+          }
         } else {
           showAlert("Login Failed", error.message);
         }
@@ -58,6 +72,12 @@ const DoctorLogin = () => {
         if (profile?.role !== 'doctor') {
           await supabase.auth.signOut();
           throw new Error("This login is for Doctors only. Organizations should use the main portal.");
+        }
+
+        if (!data.user.email_confirmed_at) {
+          await supabase.auth.signOut();
+          showAlert("Email Verification Required", "Please verify your email before logging in.");
+          return;
         }
 
         if (profile?.status === 'pending') {
@@ -78,6 +98,57 @@ const DoctorLogin = () => {
       showAlert("Login Failed", error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otp || otp.length < 6) {
+      showAlert("Invalid OTP", "Please enter the 6-digit verification code.");
+      return;
+    }
+
+    setVerifying(true);
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token: otp,
+        type: 'signup',
+      });
+
+      if (error) throw error;
+
+      if (data.session) {
+        // Check if profile exists, if not create from metadata
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.session.user.id)
+          .single();
+
+        if (!profile) {
+          const metadata = data.session.user.user_metadata;
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: data.session.user.id,
+              full_name: metadata?.full_name || "Dr. User",
+              phone: metadata?.phone || "",
+              role: metadata?.role || "doctor",
+              status: "pending", // Doctors always start as pending
+              specialization: metadata?.specialization || null,
+              org_id: metadata?.org_id || null,
+            });
+
+          if (profileError) throw profileError;
+        }
+
+        setShowVerifyModal(false);
+        navigation.navigate("Dashboard");
+      }
+    } catch (error: any) {
+      showAlert("Verification Failed", error.message);
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -173,6 +244,52 @@ const DoctorLogin = () => {
             </TouchableOpacity>
           </View>
         </View>
+
+        <Modal visible={showVerifyModal} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHandle} />
+              <View style={styles.modalIconBox}>
+                <Stethoscope size={32} color="#0EA5E9" />
+              </View>
+
+              <Text style={styles.modalTitle}>Verify Clinical Account</Text>
+              <Text style={styles.modalSubtitle}>
+                We've sent a code to{"\n"}
+                <Text style={styles.boldEmail}>{email.trim()}</Text>
+              </Text>
+
+              <TextInput
+                style={styles.otpInput}
+                placeholder="000000"
+                maxLength={6}
+                keyboardType="number-pad"
+                value={otp}
+                onChangeText={setOtp}
+                placeholderTextColor="#94A3B8"
+              />
+              
+              <TouchableOpacity 
+                style={[styles.modalButton, verifying && styles.buttonDisabled]} 
+                onPress={handleVerifyOtp}
+                disabled={verifying}
+              >
+                {verifying ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.modalButtonText}>Verify & Enter Clinic</Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                onPress={() => setShowVerifyModal(false)}
+                style={styles.modalCancel}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -339,6 +456,88 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#0EA5E9",
     fontWeight: "700",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 32,
+    paddingBottom: 48,
+    alignItems: "center",
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#E2E8F0",
+    borderRadius: 2,
+    marginBottom: 24,
+  },
+  modalIconBox: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: "#F0F9FF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 15,
+    color: "#64748B",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  boldEmail: {
+    fontWeight: "700",
+    color: "#0EA5E9",
+  },
+  otpInput: {
+    width: "100%",
+    height: 56,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
+    textAlign: "center",
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#0F172A",
+    letterSpacing: 8,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  modalButton: {
+    width: "100%",
+    height: 56,
+    backgroundColor: "#0EA5E9",
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  modalButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  modalCancel: {
+    padding: 12,
+  },
+  modalCancelText: {
+    color: "#EF4444",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });
 

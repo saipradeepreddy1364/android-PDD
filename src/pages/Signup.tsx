@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Keyboa
 import { useNavigation } from "@react-navigation/native";
 import { Stethoscope, Loader2, ChevronDown, Search, Eye, EyeOff } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const showAlert = (title: string, message: string, actions?: any[]) => {
   if (Platform.OS === 'web') {
@@ -179,6 +180,53 @@ const Signup = () => {
     return () => clearInterval(pollSignIn);
   }, [pendingModalVisible, formData.email, formData.password]);
 
+  // Save draft whenever formData changes (except password)
+  useEffect(() => {
+    const saveDraft = async () => {
+      if (!formData.email) return;
+      try {
+        const draft = { ...formData };
+        delete (draft as any).password;
+        delete (draft as any).confirmPassword;
+        await AsyncStorage.setItem(`signup_draft_${formData.email.toLowerCase().trim()}`, JSON.stringify({
+          ...draft,
+          authType
+        }));
+      } catch (e) {
+        console.error("Draft Save Error:", e);
+      }
+    };
+    saveDraft();
+  }, [formData.name, formData.email, formData.phone, formData.specialization, formData.organization.id, formData.role, authType]);
+
+  // Load draft when email changes
+  useEffect(() => {
+    const loadDraft = async () => {
+      const email = formData.email.toLowerCase().trim();
+      if (email.length < 5 || !email.includes("@")) return;
+
+      try {
+        const saved = await AsyncStorage.getItem(`signup_draft_${email}`);
+        if (saved) {
+          const draft = JSON.parse(saved);
+          // Only auto-fill if the current fields are empty to avoid overwriting user input
+          setFormData(prev => ({
+            ...prev,
+            name: prev.name || draft.name,
+            phone: prev.phone || draft.phone,
+            specialization: prev.specialization || draft.specialization,
+            organization: prev.organization.id ? prev.organization : draft.organization,
+            role: prev.role === 'dentist' ? draft.role : prev.role, // only if default
+          }));
+          if (draft.authType) setAuthType(draft.authType);
+        }
+      } catch (e) {
+        console.error("Draft Load Error:", e);
+      }
+    };
+    loadDraft();
+  }, [formData.email]);
+
   const handleSignup = async () => {
     if (!formData.email || !formData.password || !formData.confirmPassword || !formData.name || !formData.phone) {
       showAlert("Missing Fields", "Please fill in all mandatory fields.");
@@ -197,7 +245,7 @@ const Signup = () => {
 
     try {
       // 1. Check for duplicate Organization name if signing up as organization
-      if (authType === "organization") {
+      if ((authType as string) === "organization") {
         const { data: existingOrg } = await supabase
           .from('profiles')
           .select('id')
@@ -213,15 +261,50 @@ const Signup = () => {
       }
 
       // 2. Check if user exists but is unverified
-      // We attempt a signup - if it fails with 'already registered', 
-      // we know we might need to clean up.
       let { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
+        options: {
+          data: {
+            full_name: formData.name,
+            phone: formData.phone,
+            role: authType,
+            specialization: authType === "doctor" ? formData.specialization : null,
+            org_id: authType === "doctor" ? formData.organization.id : null,
+            org_name: authType === "doctor" ? formData.organization.name : null,
+          }
+        }
       });
 
-      if (error && error.message.includes("already registered")) {
-        showAlert("Account Unverified", "This account exists but is not verified. Please sign up again.");
+      if (error && error.message.toLowerCase().includes("already registered")) {
+        // Try to see if they are unverified
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: "DUMMY_PASSWORD_CHECK",
+        });
+
+        if (signInError?.message.toLowerCase().includes("email not confirmed")) {
+          showAlert("Account Unverified", "We found your previous registration attempt. Your details have been restored. Click 'Verify Now' to receive a new code.", [
+            { 
+              text: "Verify Now", 
+              onPress: async () => {
+                const { error: resendError } = await supabase.auth.resend({
+                  type: 'signup',
+                  email: formData.email,
+                });
+                if (!resendError) {
+                  setVerifying(true);
+                  setVerifyModalVisible(true);
+                } else {
+                  showAlert("Error", resendError.message);
+                }
+              }
+            },
+            { text: "Cancel", style: "cancel" }
+          ]);
+        } else {
+          showAlert("Account Exists", "This email is already registered and verified. Please use the Login page to sign in.");
+        }
         setLoading(false);
         return;
       }
@@ -263,8 +346,8 @@ const Signup = () => {
           id: data.session.user.id,
           full_name: formData.name,
           phone: formData.phone,
-          role: authType,
-          status: authType === "organization" ? "approved" : "pending", // Doctors stay pending
+          role: authType as any,
+          status: (authType as string) === "organization" ? "approved" : "pending", // Doctors stay pending
           specialization: authType === "doctor" ? formData.specialization : null,
           org_id: authType === "doctor" ? formData.organization.id : null,
         };
@@ -275,9 +358,12 @@ const Signup = () => {
 
         if (profileError) throw profileError;
 
+        // Cleanup draft
+        await AsyncStorage.removeItem(`signup_draft_${formData.email.toLowerCase().trim()}`);
+
         setVerifyModalVisible(false);
 
-        if (authType === "doctor") {
+        if ((authType as string) === "doctor") {
           // Redirect Doctors to the waiting screen
           setPendingModalVisible(true);
         } else {
@@ -335,17 +421,17 @@ const Signup = () => {
             <Text style={[styles.tabText, authType === "doctor" && styles.tabTextActive]}>Doctor</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.tab, authType === "organization" && styles.tabActive]}
+            style={[styles.tab, (authType as string) === "organization" && styles.tabActive]}
             onPress={() => setAuthType("organization")}
           >
-            <Text style={[styles.tabText, authType === "organization" && styles.tabTextActive]}>Organization</Text>
+            <Text style={[styles.tabText, (authType as string) === "organization" && styles.tabTextActive]}>Organization</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.form}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>
-              {authType === "organization" ? "Organization Name" : "Full name"}
+              {(authType as string) === "organization" ? "Organization Name" : "Full name"}
             </Text>
             <View style={styles.inputWrapper}>
               <TextInput
@@ -354,7 +440,7 @@ const Signup = () => {
                 value={formData.name}
                 onChangeText={(v) => {
                   setFormData({ ...formData, name: v });
-                  if (authType === "organization") setShowSuggestions(true);
+                  if ((authType as string) === "organization") setShowSuggestions(true);
                 }}
                 placeholderTextColor="#94A3B8"
               />
@@ -365,7 +451,7 @@ const Signup = () => {
               )}
             </View>
             
-            {authType === "organization" && showSuggestions && googleResults.length > 0 && (
+            {(authType as string) === "organization" && showSuggestions && googleResults.length > 0 && (
               <View style={styles.inlineDropdown}>
                 <Text style={styles.dropdownLabel}>Suggested Official Names (Web Search)</Text>
                 {googleResults[0] === "NO_RESULTS" ? (

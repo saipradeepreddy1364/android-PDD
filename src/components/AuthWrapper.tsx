@@ -15,6 +15,15 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user && !session.user.email_confirmed_at) {
+        await supabase.auth.signOut();
+        setSession(null);
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+
       setSession(session);
 
       if (session?.user) {
