@@ -149,12 +149,13 @@ const Login = () => {
             .from('profiles')
             .upsert({
               id: data.session.user.id,
-              full_name: metadata?.full_name || "New User",
+              full_name: metadata?.full_name || metadata?.name || "New User",
               phone: metadata?.phone || "",
               role: metadata?.role || "organization",
               status: metadata?.role === "organization" ? "approved" : "pending",
               specialization: metadata?.specialization || null,
               org_id: metadata?.org_id || null,
+              org_name: metadata?.org_name || metadata?.organization_name || null,
             });
 
           if (profileError) throw profileError;

@@ -29,6 +29,7 @@ const Dashboard = () => {
   const navigation = useNavigation<any>();
   const { data: preloadedData, isPreloaded } = useAppData();
   const [userName, setUserName] = useState("Doctor");
+  const [orgName, setOrgName] = useState("");
   const [greeting, setGreeting] = useState("Good morning");
   const [stats, setStats] = useState(preloadedData.stats);
   const [recentCases, setRecentCases] = useState<any[]>(preloadedData.recentCases);
@@ -48,6 +49,7 @@ const Dashboard = () => {
       const userRole = preloadedData.profile.role || 'doctor';
       setRole(userRole);
       setUserName(preloadedData.profile.full_name || "Doctor");
+      setOrgName(preloadedData.profile.org_name || "");
       setStats(preloadedData.stats);
       setRecentCases(preloadedData.recentCases.slice(0, 3).map(c => ({
         id: c.id,
@@ -75,13 +77,14 @@ const Dashboard = () => {
 
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role, id, full_name')
+          .select('role, id, full_name, org_name')
           .eq('id', user.id)
           .single();
 
         const userRole = profile?.role || metaRole || 'doctor';
         setRole(userRole);
         setUserName(profile?.full_name || user.user_metadata?.full_name || "Doctor");
+        setOrgName(profile?.org_name || user.user_metadata?.org_name || "");
 
         if (userRole === 'organization') {
           navigation.replace("OrgDashboard");
@@ -139,6 +142,11 @@ const Dashboard = () => {
             <Text style={styles.greetingText}>
               {greeting}, Dr. {userName}
             </Text>
+            {orgName ? (
+              <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 12, fontWeight: '600' }}>
+                {orgName}
+              </Text>
+            ) : null}
             <Text style={styles.statsSummary}>
               {stats.active} new cases · {stats.lab} lab requests pending
             </Text>

@@ -163,7 +163,7 @@ const OrgDashboard = () => {
               numberOfLines={1}
               minimumFontScale={0.5}
             >
-              {profile?.full_name || "Organization"}
+              {profile?.full_name || profile?.org_name || "Organization"}
             </Text>
             <View style={styles.verifiedBadge}>
               <UserCheck size={12} color="#10B981" />

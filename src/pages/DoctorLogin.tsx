@@ -131,12 +131,13 @@ const DoctorLogin = () => {
             .from('profiles')
             .upsert({
               id: data.session.user.id,
-              full_name: metadata?.full_name || "Dr. User",
+              full_name: metadata?.full_name || metadata?.name || "Dr. User",
               phone: metadata?.phone || "",
               role: metadata?.role || "doctor",
-              status: "pending", // Doctors always start as pending
+              status: "pending", 
               specialization: metadata?.specialization || null,
               org_id: metadata?.org_id || null,
+              org_name: metadata?.org_name || metadata?.organization_name || null,
             });
 
           if (profileError) throw profileError;
