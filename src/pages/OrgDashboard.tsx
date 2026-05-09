@@ -87,7 +87,25 @@ const OrgDashboard = () => {
         .eq('id', user.id)
         .single();
       
-      if (p) setProfile(p);
+      if (p) {
+        setProfile(p);
+        
+        // Self-Correction: If name is missing or placeholder, try to restore from metadata
+        if (!p.full_name || p.full_name === "New User" || !p.org_name) {
+          const metadata = user.user_metadata;
+          const recoveredName = p.full_name && p.full_name !== "New User" ? p.full_name : (metadata?.full_name || metadata?.name);
+          const recoveredOrg = p.org_name || metadata?.org_name || metadata?.organization_name || recoveredName;
+          
+          if (recoveredName || recoveredOrg) {
+            await supabase.from('profiles').update({
+              full_name: recoveredName || p.full_name,
+              org_name: recoveredOrg || p.org_name
+            }).eq('id', user.id);
+            // Refresh local state
+            setProfile({ ...p, full_name: recoveredName || p.full_name, org_name: recoveredOrg || p.org_name });
+          }
+        }
+      }
 
       // 4. Check for Pending Approvals
       console.log("OrgDashboard: Checking pending approvals for Org ID:", user.id);

@@ -86,6 +86,23 @@ const Dashboard = () => {
         setUserName(profile?.full_name || user.user_metadata?.full_name || "Doctor");
         setOrgName(profile?.org_name || user.user_metadata?.org_name || "");
 
+        // Self-Correction for Doctors
+        if (profile && (!profile.full_name || profile.full_name === "Doctor" || profile.full_name === "New User" || !profile.org_name)) {
+          const metadata = user.user_metadata;
+          const recoveredName = profile.full_name && !["Doctor", "New User", "Dr. User"].includes(profile.full_name) ? profile.full_name : (metadata?.full_name || metadata?.name);
+          const recoveredOrg = profile.org_name || metadata?.org_name || metadata?.organization_name || metadata?.org_id; // org_id as fallback if needed
+          
+          if (recoveredName || recoveredOrg) {
+            await supabase.from('profiles').update({
+              full_name: recoveredName || profile.full_name,
+              org_name: recoveredOrg || profile.org_name
+            }).eq('id', user.id);
+            // Update local state
+            setUserName(recoveredName || userName);
+            setOrgName(recoveredOrg || orgName);
+          }
+        }
+
         if (userRole === 'organization') {
           navigation.replace("OrgDashboard");
           return;
