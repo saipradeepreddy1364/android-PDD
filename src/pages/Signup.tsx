@@ -262,7 +262,6 @@ const Signup = () => {
         const profileData = {
           id: data.session.user.id,
           full_name: formData.name,
-          email: formData.email,
           phone: formData.phone,
           role: authType,
           status: authType === "organization" ? "approved" : "pending", // Doctors stay pending
@@ -296,12 +295,15 @@ const Signup = () => {
   };
 
   const handleCancelSignup = async () => {
-    // If user cancels during OTP, we clear state and navigate back
-    // The unverified auth record will eventually be cleaned up by Supabase
+    // If user cancels during OTP, we clean up the unverified auth record immediately
+    if (tempUserId) {
+      await supabase.rpc('delete_rejected_user', { target_user_id: tempUserId });
+    }
+    
     setVerifyModalVisible(false);
     setOtp("");
     setTempUserId(null);
-    showAlert("Registration Cancelled", "The verification process was aborted. Your organization details have not been finalized.");
+    showAlert("Registration Cancelled", "The verification process was aborted and your temporary details have been removed.");
     navigation.navigate("Login");
   };
 

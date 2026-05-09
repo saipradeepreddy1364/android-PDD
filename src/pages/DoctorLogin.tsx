@@ -37,12 +37,8 @@ const DoctorLogin = () => {
 
       if (error) {
         if (error.message.toLowerCase().includes("invalid login credentials")) {
-          const { data: check } = await supabase.from('profiles').select('id').eq('email', email).maybeSingle();
-          if (!check) {
-            showAlert("Login Failed", "Email not found. Please register to login.");
-          } else {
-            showAlert("Login Failed", "Incorrect password. Please try again.");
-          }
+          // Standard check as email column is not available in profiles schema
+          showAlert("Login Failed", "Incorrect email or password. Please ensure you have been approved by your organization.");
         } else if (error.message.toLowerCase().includes("email not confirmed")) {
           showAlert("Email Verification Required", "Please create your account again and verify your email to sign in.");
         } else {
