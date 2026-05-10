@@ -3,6 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Platform } from "react-native";
 import { StatusBar } from "expo-status-bar";
 
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -38,7 +39,7 @@ const App = () => {
   useRealtimeNotifications();
 
   const linking = {
-    prefixes: [Platform.OS === 'web' ? window.location.origin : 'clinlab://'],
+    prefixes: [Platform.OS === 'web' ? (typeof window !== 'undefined' ? window.location.origin : 'https://clinlab-ai-assist.vercel.app') : 'clinlab://'],
     config: {
       screens: {
         ResetPassword: 'reset-password',
