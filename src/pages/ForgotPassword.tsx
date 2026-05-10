@@ -36,14 +36,15 @@ const ForgotPassword = () => {
   }, []);
 
   const handleSendOtp = async () => {
-    if (!email) {
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail) {
       showAlert("Error", "Please enter your registered email address.");
       return;
     }
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
         redirectTo: Platform.OS === 'web' ? window.location.origin + '/reset-password' : 'clinlab://reset-password',
       });
 
@@ -67,7 +68,7 @@ const ForgotPassword = () => {
     setLoading(true);
     try {
       const { error } = await supabase.auth.verifyOtp({
-        email,
+        email: email.trim().toLowerCase(),
         token: otp,
         type: 'recovery',
       });

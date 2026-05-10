@@ -54,10 +54,10 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const trimmedEmail = email.trim();
+      const trimmedEmail = email.trim().toLowerCase();
       const trimmedPassword = password.trim();
 
-      if (!trimmedEmail.includes("@") || !trimmedEmail.includes(".")) {
+      if (!trimmedEmail || !trimmedEmail.includes("@") || !trimmedEmail.includes(".")) {
         showAlert("Invalid Email", "Please enter a valid email address.");
         setLoading(false);
         return;
@@ -70,23 +70,17 @@ const Login = () => {
 
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
-          // DEEP CHECK: Use the resend challenge to find out if the email actually exists
-          // This bypasses all database RLS (401) issues.
-          const { error: resendCheck } = await supabase.auth.resend({
-            type: 'signup',
-            email: trimmedEmail,
-          });
+          // Reliable existence check via profiles table
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', trimmedEmail)
+            .maybeSingle();
 
-          // "Email is already confirmed" means the account EXISTS, so the password was wrong.
-          if (resendCheck?.message.toLowerCase().includes("already confirmed") || 
-              resendCheck?.message.toLowerCase().includes("already registered")) {
+          if (profile) {
             showAlert("Incorrect Password", "The password you entered is incorrect. Please try again or reset your password.");
-          } else if (resendCheck?.message.toLowerCase().includes("user not found")) {
-            // "User not found" means the email is wrong.
-            showAlert("Account Not Found", "No account is registered with this email address. Please sign up first.");
           } else {
-            // Fallback for any other scenario
-            showAlert("Login Failed", "Incorrect email or password. Please try again.");
+            showAlert("Account Not Found", "No account is registered with this email address. Please sign up first.");
           }
         } else if (error.message.toLowerCase().includes("email not confirmed")) {
           // Trigger OTP flow directly from Login

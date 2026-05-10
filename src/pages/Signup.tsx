@@ -279,7 +279,8 @@ const Signup = () => {
   }, [formData.email]);
 
   const handleSignup = async () => {
-    if (!formData.email || !formData.password || !formData.confirmPassword || !formData.name || !formData.phone) {
+    const trimmedEmail = formData.email.trim().toLowerCase();
+    if (!trimmedEmail || !formData.password || !formData.confirmPassword || !formData.name || !formData.phone) {
       showAlert("Missing Fields", "Please fill in all mandatory fields.");
       return;
     }
@@ -313,7 +314,7 @@ const Signup = () => {
 
       // 2. Check if user exists but is unverified
       let { data, error } = await supabase.auth.signUp({
-        email: formData.email,
+        email: trimmedEmail,
         password: formData.password,
         options: {
           data: {
@@ -330,7 +331,7 @@ const Signup = () => {
       if (error && error.message.toLowerCase().includes("already registered")) {
         // Try to see if they are unverified
         const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: formData.email,
+          email: trimmedEmail,
           password: "DUMMY_PASSWORD_CHECK",
         });
 
@@ -341,7 +342,7 @@ const Signup = () => {
               onPress: async () => {
                 const { error: resendError } = await supabase.auth.resend({
                   type: 'signup',
-                  email: formData.email,
+                  email: trimmedEmail,
                 });
                 if (!resendError) {
                   setVerifying(true);
@@ -373,7 +374,7 @@ const Signup = () => {
           specialization: authType === "doctor" ? formData.specialization : null,
           org_id: authType === "doctor" ? formData.organization.id : null,
           org_name: authType === "doctor" ? formData.organization.name : formData.name,
-          email: formData.email.toLowerCase().trim(),
+          email: trimmedEmail,
         };
 
         await supabase.from('profiles').upsert(profileData);
@@ -399,7 +400,7 @@ const Signup = () => {
     try {
       // 1. Verify the OTP with Supabase
       const { data, error } = await supabase.auth.verifyOtp({
-        email: formData.email,
+        email: formData.email.trim().toLowerCase(),
         token: otp,
         type: 'signup',
       });
