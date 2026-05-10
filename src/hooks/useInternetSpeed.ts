@@ -7,8 +7,8 @@ const SLOW_SPEED_THRESHOLD_MBPS = 0.5;
 const POPUP_DURATION_MS = 2000;
 
 // A small, reliable public resource (~50KB) for real download testing.
-const TEST_FILE_URL = 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Circle-icons-phone.svg/512px-Circle-icons-phone.svg.png';
-const TEST_FILE_SIZE_BITS = 48000 * 8; // ~48KB converted to bits
+const TEST_FILE_URL = 'https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&q=80&w=200';
+const TEST_FILE_SIZE_BITS = 35000 * 8; // ~35KB
 
 export type NetworkStatus = 'offline' | 'slow' | 'normal' | 'unknown';
 
@@ -57,7 +57,7 @@ export const useInternetSpeed = () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s max wait
 
-      const response = await fetch(`${TEST_FILE_URL}?cache-bust=${start}`, {
+      const response = await fetch(TEST_FILE_URL, {
         cache: 'no-store',
         signal: controller.signal,
       });

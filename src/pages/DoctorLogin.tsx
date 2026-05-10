@@ -41,17 +41,22 @@ const DoctorLogin = () => {
 
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
-          // Check database for existence (case-insensitive)
-          const { data: exists } = await supabase
-            .from('profiles')
-            .select('id')
-            .ilike('email', trimmedEmail)
-            .maybeSingle();
+          // DEEP CHECK: Use the resend challenge to find out if the email actually exists
+          const { error: resendCheck } = await supabase.auth.resend({
+            type: 'signup',
+            email: trimmedEmail,
+          });
 
-          if (exists) {
+          // "Email is already confirmed" means the account EXISTS, so the password was wrong.
+          if (resendCheck?.message.toLowerCase().includes("already confirmed") || 
+              resendCheck?.message.toLowerCase().includes("already registered")) {
             showAlert("Incorrect Password", "The password you entered is incorrect. Please try again or reset your password.");
-          } else {
+          } else if (resendCheck?.message.toLowerCase().includes("user not found")) {
+            // "User not found" means the email is wrong.
             showAlert("Account Not Found", "No doctor account is registered with this email address. Please sign up first.");
+          } else {
+            // Fallback for any other scenario
+            showAlert("Login Failed", "Incorrect email or password. Please try again.");
           }
         } else if (error.message.toLowerCase().includes("email not confirmed")) {
           setLoading(true);
