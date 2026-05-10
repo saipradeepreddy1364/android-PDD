@@ -40,6 +40,57 @@ const Signup = () => {
     organization: { id: "", name: "" },
     role: "dentist",
   });
+  const [checkingEmail, setCheckingEmail] = useState(false);
+
+  // Auto-fill logic for returning unverified users
+  useEffect(() => {
+    const checkExistingDraft = async () => {
+      const trimmedEmail = formData.email.trim().toLowerCase();
+      if (trimmedEmail.includes('@') && trimmedEmail.includes('.')) {
+        setCheckingEmail(true);
+        try {
+          const { data: draft, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('email', trimmedEmail)
+            .eq('status', 'unverified') // Only resume unverified ones
+            .maybeSingle();
+
+          if (draft && !error) {
+            setFormData(prev => ({
+              ...prev,
+              name: draft.full_name || prev.name,
+              phone: draft.phone || prev.phone,
+              specialization: draft.specialization || prev.specialization,
+              // Note: password is not recovered for security
+            }));
+            
+            // If it's a doctor, we need to match the organization
+            if (authType === 'doctor' && draft.org_id) {
+              const { data: org } = await supabase
+                .from('profiles')
+                .select('id, full_name')
+                .eq('id', draft.org_id)
+                .single();
+              if (org) {
+                setFormData(prev => ({
+                  ...prev,
+                  organization: { id: org.id, name: org.full_name }
+                }));
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Error checking for signup draft:", err);
+        } finally {
+          setCheckingEmail(false);
+        }
+      }
+    };
+
+    const timer = setTimeout(checkExistingDraft, 1000); // Debounce
+    return () => clearTimeout(timer);
+  }, [formData.email, authType]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [googleResults, setGoogleResults] = useState<string[]>([]);
@@ -312,6 +363,21 @@ const Signup = () => {
       if (error) throw error;
 
       if (data.user) {
+        // Create unverified profile draft
+        const profileData = {
+          id: data.user.id,
+          full_name: formData.name,
+          phone: formData.phone,
+          role: authType as any,
+          status: "unverified",
+          specialization: authType === "doctor" ? formData.specialization : null,
+          org_id: authType === "doctor" ? formData.organization.id : null,
+          org_name: authType === "doctor" ? formData.organization.name : formData.name,
+          email: formData.email.toLowerCase().trim(),
+        };
+
+        await supabase.from('profiles').upsert(profileData);
+
         setTempUserId(data.user.id);
         setVerifying(true);
         setVerifyModalVisible(true);
@@ -341,22 +407,13 @@ const Signup = () => {
       if (error) throw error;
 
       if (data.session) {
-        // 2. NOW we create the database record based on the role
-        const profileData = {
-          id: data.session.user.id,
-          full_name: formData.name,
-          phone: formData.phone,
-          role: authType as any,
-          status: (authType as string) === "organization" ? "approved" : "pending", // Doctors stay pending
-          specialization: authType === "doctor" ? formData.specialization : null,
-          org_id: authType === "doctor" ? formData.organization.id : null,
-          org_name: authType === "doctor" ? formData.organization.name : formData.name,
-          email: formData.email.toLowerCase().trim(),
-        };
-
+        // 2. Update status to approved (or pending for doctors)
         const { error: profileError } = await supabase
           .from('profiles')
-          .upsert(profileData); // Use upsert to prevent "duplicate key" errors
+          .update({
+            status: (authType as string) === "organization" ? "approved" : "pending"
+          })
+          .eq('id', data.session.user.id);
 
         if (profileError) throw profileError;
 
