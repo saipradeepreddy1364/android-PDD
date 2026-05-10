@@ -41,19 +41,16 @@ const DoctorLogin = () => {
 
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
-          // PRO TRICK: To distinguish between "Email Not Found" and "Incorrect Password"
-          // without needing a separate database column, we try a mock signup.
-          const { error: checkError } = await supabase.auth.signUp({
-            email: trimmedEmail,
-            password: "CHECK_EXISTENCE_" + Math.random(),
-          });
+          // Check database for existence (case-insensitive)
+          const { data: exists } = await supabase
+            .from('profiles')
+            .select('id')
+            .ilike('email', trimmedEmail)
+            .maybeSingle();
 
-          // If signUp says "User already registered", it means the EMAIL exists, 
-          // so the original login failed because of an INCORRECT PASSWORD.
-          if (checkError?.message.toLowerCase().includes("already registered")) {
+          if (exists) {
             showAlert("Incorrect Password", "The password you entered is incorrect. Please try again or reset your password.");
           } else {
-            // If it doesn't say "already registered", then the EMAIL itself is not in the system.
             showAlert("Account Not Found", "No doctor account is registered with this email address. Please sign up first.");
           }
         } else if (error.message.toLowerCase().includes("email not confirmed")) {
