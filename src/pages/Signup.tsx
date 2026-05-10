@@ -408,13 +408,22 @@ const Signup = () => {
       if (error) throw error;
 
       if (data.session) {
-        // 2. Update status to approved (or pending for doctors)
+        // 2. Ensure profile exists and update status
+        const profileData = {
+          id: data.session.user.id,
+          full_name: formData.name,
+          phone: formData.phone,
+          role: authType as any,
+          status: (authType as string) === "organization" ? "approved" : "pending",
+          specialization: authType === "doctor" ? formData.specialization : null,
+          org_id: authType === "doctor" ? formData.organization.id : null,
+          org_name: authType === "doctor" ? formData.organization.name : formData.name,
+          email: formData.email.trim().toLowerCase(),
+        };
+
         const { error: profileError } = await supabase
           .from('profiles')
-          .update({
-            status: (authType as string) === "organization" ? "approved" : "pending"
-          })
-          .eq('id', data.session.user.id);
+          .upsert(profileData);
 
         if (profileError) throw profileError;
 

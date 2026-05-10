@@ -102,14 +102,29 @@ const Login = () => {
       }
       
       if (data.session) {
-        const { data: profile } = await supabase
+        let { data: profile } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', data.session.user.id)
           .single();
 
-        // Self-Healing: Sync email to profiles table if missing
-        if (profile && !profile.email) {
+        // Self-Healing: Sync email or create missing profile (fixes older accounts or failed upserts)
+        if (!profile) {
+          const metadata = data.session.user.user_metadata;
+          await supabase.from('profiles').upsert({
+            id: data.session.user.id,
+            full_name: metadata?.full_name || metadata?.name || "User",
+            email: trimmedEmail,
+            phone: metadata?.phone || "",
+            role: metadata?.role || "organization",
+            status: metadata?.role === "organization" ? "approved" : "pending",
+            org_id: metadata?.org_id || null,
+            org_name: metadata?.org_name || null,
+          });
+          
+          const { data: newProfile } = await supabase.from('profiles').select('*').eq('id', data.session.user.id).single();
+          profile = newProfile;
+        } else if (!profile.email) {
           await supabase.from('profiles').update({ email: trimmedEmail }).eq('id', data.session.user.id);
         }
 

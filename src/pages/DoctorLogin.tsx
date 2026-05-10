@@ -73,14 +73,31 @@ const DoctorLogin = () => {
       }
 
       if (data.user) {
-        const { data: profile } = await supabase
+        let { data: profile } = await supabase
           .from('profiles')
           .select('role, status, email')
           .eq('id', data.user.id)
           .single();
 
-        // Self-Healing: Sync email to profiles table if missing
-        if (profile && !(profile as any).email) {
+        // Self-Healing: Sync email or create missing profile (fixes older accounts or failed upserts)
+        if (!profile) {
+          const metadata = data.user.user_metadata;
+          await supabase.from('profiles').upsert({
+            id: data.user.id,
+            full_name: metadata?.full_name || metadata?.name || "Doctor",
+            email: trimmedEmail,
+            phone: metadata?.phone || "",
+            role: "doctor",
+            status: "pending",
+            specialization: metadata?.specialization || null,
+            org_id: metadata?.org_id || null,
+            org_name: metadata?.org_name || null,
+          });
+          
+          // Re-fetch profile to have the data for the next checks
+          const { data: newProfile } = await supabase.from('profiles').select('role, status, email').eq('id', data.user.id).single();
+          profile = newProfile;
+        } else if (!(profile as any).email) {
           await supabase.from('profiles').update({ email: trimmedEmail }).eq('id', data.user.id);
         }
 
