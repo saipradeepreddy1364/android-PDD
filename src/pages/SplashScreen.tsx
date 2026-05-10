@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { View, StyleSheet, Image } from "react-native";
+import { View, StyleSheet, Image, Platform } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { supabase } from "@/lib/supabase";
 import { useAppData } from "@/lib/AppDataContext";
@@ -86,6 +86,14 @@ const SplashScreen = () => {
         new Promise(resolve => setTimeout(resolve, 4000)),
       ]);
 
+      // Prevent redirecting if we are on a deep link like reset-password
+      const isResetPasswordRoute = Platform.OS === 'web' && typeof window !== 'undefined' && window.location.pathname.includes('reset-password');
+      
+      if (isResetPasswordRoute) {
+        // Do nothing, let React Navigation handle the deep link to ResetPassword
+        return;
+      }
+
       // Navigate only after BOTH data is ready AND 4 seconds have passed
       if (authResult.session) {
         if (authResult.role === 'organization') {
@@ -94,11 +102,7 @@ const SplashScreen = () => {
           navigation.replace("Dashboard");
         }
       } else {
-        // Prevent redirecting if we are on a deep link like reset-password
-        const isResetPasswordRoute = Platform.OS === 'web' && typeof window !== 'undefined' && window.location.pathname.includes('reset-password');
-        if (!isResetPasswordRoute) {
-          navigation.replace("Login");
-        }
+        navigation.replace("Login");
       }
     };
 

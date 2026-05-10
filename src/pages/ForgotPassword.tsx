@@ -17,25 +17,11 @@ const showAlert = (title: string, message: string, actions?: any[]) => {
 
 const ForgotPassword = () => {
   const navigation = useNavigation<any>();
-  const [step, setStep] = useState(1); // 1: Email, 2: OTP, 3: New Password
+  const [step, setStep] = useState(1); // 1: Email, 2: Success Message
   const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Check if we arrived here via a recovery link
-  React.useEffect(() => {
-    const checkRecovery = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session && window.location.hash.includes('type=recovery')) {
-        setStep(3);
-      }
-    };
-    if (Platform.OS === 'web') checkRecovery();
-  }, []);
-
-  const handleSendOtp = async () => {
+  const handleSendLink = async () => {
     const trimmedEmail = email.trim().toLowerCase();
     if (!trimmedEmail) {
       showAlert("Error", "Please enter your registered email address.");
@@ -50,59 +36,9 @@ const ForgotPassword = () => {
 
       if (error) throw error;
       
-      showAlert("OTP Sent", "If an account exists for this email, we've sent a recovery link/code. Since you requested OTP flow, please check your email.");
       setStep(2);
     } catch (error: any) {
       showAlert("Request Failed", error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (!otp || otp.length < 6) {
-      showAlert("Error", "Please enter the 6-digit code.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.verifyOtp({
-        email: email.trim().toLowerCase(),
-        token: otp,
-        type: 'recovery',
-      });
-
-      if (error) throw error;
-      setStep(3);
-    } catch (error: any) {
-      showAlert("Verification Failed", error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResetPassword = async () => {
-    if (password.length < 6) {
-      showAlert("Weak Password", "Password must be at least 6 characters.");
-      return;
-    }
-    if (password !== confirmPassword) {
-      showAlert("Mismatch", "Passwords do not match.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ password });
-
-      if (error) throw error;
-
-      showAlert("Success", "Your password has been reset successfully. You can now log in with your new password.", [
-        { text: "Go to Login", onPress: () => navigation.navigate("Login") }
-      ]);
-    } catch (error: any) {
-      showAlert("Reset Failed", error.message);
     } finally {
       setLoading(false);
     }
@@ -119,19 +55,15 @@ const ForgotPassword = () => {
         <View style={styles.content}>
           <View style={styles.header}>
             <View style={styles.iconBox}>
-              {step === 1 ? <Mail size={24} color="#0EA5E9" /> : 
-               step === 2 ? <KeyRound size={24} color="#0EA5E9" /> : 
-               <Lock size={24} color="#0EA5E9" />}
+              {step === 1 ? <KeyRound size={24} color="#0EA5E9" /> : <Mail size={24} color="#0EA5E9" />}
             </View>
             <Text style={styles.title}>
-              {step === 1 ? "Forgot Password?" : 
-               step === 2 ? "Verify OTP" : 
-               "Reset Password"}
+              {step === 1 ? "Forgot Password?" : "Check Your Email"}
             </Text>
             <Text style={styles.subtitle}>
-              {step === 1 ? "Enter your email to receive a recovery link and code." : 
-               step === 2 ? `Check your email ${email}. You can either click the recovery link or enter the 6-digit code below.` : 
-               "Create a strong new password for your account."}
+              {step === 1 
+                ? "Enter your email address and we'll send you a link to reset your password." 
+                : `We've sent a password reset link to ${email}. Please check your inbox and click the link to create a new password.`}
             </Text>
           </View>
 
@@ -149,61 +81,19 @@ const ForgotPassword = () => {
                   placeholderTextColor="#94A3B8"
                 />
               </View>
-              <TouchableOpacity style={styles.primaryButton} onPress={handleSendOtp} disabled={loading}>
-                {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Send Code</Text>}
+              <TouchableOpacity style={styles.primaryButton} onPress={handleSendLink} disabled={loading}>
+                {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Send Reset Link</Text>}
               </TouchableOpacity>
             </View>
           )}
 
           {step === 2 && (
             <View style={styles.form}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Verification Code</Text>
-                <TextInput
-                  style={[styles.input, styles.otpInput]}
-                  placeholder="000000"
-                  maxLength={6}
-                  keyboardType="number-pad"
-                  value={otp}
-                  onChangeText={setOtp}
-                  placeholderTextColor="#94A3B8"
-                />
-              </View>
-              <TouchableOpacity style={styles.primaryButton} onPress={handleVerifyOtp} disabled={loading}>
-                {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Verify OTP</Text>}
+              <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate("Login")}>
+                <Text style={styles.buttonText}>Return to Login</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setStep(1)} style={styles.textButton}>
-                <Text style={styles.textButtonText}>Change Email</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {step === 3 && (
-            <View style={styles.form}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>New Password</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="••••••••"
-                  secureTextEntry
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholderTextColor="#94A3B8"
-                />
-              </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Confirm New Password</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="••••••••"
-                  secureTextEntry
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholderTextColor="#94A3B8"
-                />
-              </View>
-              <TouchableOpacity style={styles.primaryButton} onPress={handleResetPassword} disabled={loading}>
-                {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Update Password</Text>}
+                <Text style={styles.textButtonText}>Try a different email</Text>
               </TouchableOpacity>
             </View>
           )}
