@@ -72,26 +72,17 @@ const Login = () => {
         // Any error that isn't specifically about unconfirmed email is likely a credential issue
         if (!error.message.toLowerCase().includes("email not confirmed")) {
           // Reliable existence check via profiles table
+          // Existence check via profiles table (fuzzy)
           const { data: profile } = await supabase
             .from('profiles')
             .select('id')
-            .eq('email', trimmedEmail)
+            .ilike('email', trimmedEmail)
             .maybeSingle();
 
           if (profile) {
             showAlert("Login Failed", "Incorrect email or password. Please try again.");
           } else {
-            // Check Auth system directly to be 100% sure
-            const { error: signUpError } = await supabase.auth.signUp({
-              email: trimmedEmail,
-              password: "DUMMY_CHECK_PWD_" + Math.random().toString(36),
-            });
-
-            if (signUpError?.message.toLowerCase().includes("already registered")) {
-              showAlert("Login Failed", "Incorrect email or password. Please try again.");
-            } else {
-              showAlert("Account Not Found", "This email is not registered. Please register to get access.");
-            }
+            showAlert("Account Not Found", "This email is not registered. Please register to get access.");
           }
         } else {
           // Trigger OTP flow directly from Login
