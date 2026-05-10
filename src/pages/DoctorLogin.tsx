@@ -40,7 +40,8 @@ const DoctorLogin = () => {
       });
 
       if (error) {
-        if (error.message.includes("Invalid login credentials")) {
+        // Any error that isn't specifically about unconfirmed email is likely a credential issue
+        if (!error.message.toLowerCase().includes("email not confirmed")) {
           // Reliable existence check via profiles table
           const { data: profile } = await supabase
             .from('profiles')
@@ -51,9 +52,9 @@ const DoctorLogin = () => {
           if (profile) {
             showAlert("Incorrect Password", "The password you entered is incorrect. Please try again or reset your password.");
           } else {
-            showAlert("Account Not Found", "No doctor account is registered with this email address. Please sign up first.");
+            showAlert("Account Not Found", "This email is not registered. Please create an account and verify to sign in.");
           }
-        } else if (error.message.toLowerCase().includes("email not confirmed")) {
+        } else {
           setLoading(true);
           const { error: resendError } = await supabase.auth.resend({
             type: 'signup',
@@ -66,8 +67,6 @@ const DoctorLogin = () => {
           } else {
             showAlert("Verification Error", resendError.message);
           }
-        } else {
-          showAlert("Login Failed", error.message);
         }
         setLoading(false);
         return;
