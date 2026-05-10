@@ -43,13 +43,16 @@ const DoctorLogin = () => {
         // Any error that isn't specifically about unconfirmed email is likely a credential issue
         if (!error.message.toLowerCase().includes("email not confirmed")) {
           // Reliable existence check via profiles table
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('id')
             .eq('email', trimmedEmail)
             .maybeSingle();
 
-          if (profile) {
+          if (profileError) {
+            console.error("Profile check error:", profileError);
+            showAlert("Login Failed", "Incorrect email or password. Please try again.");
+          } else if (profile) {
             showAlert("Incorrect Password", "The password you entered is incorrect. Please try again or reset your password.");
           } else {
             showAlert("Account Not Found", "This email is not registered. Please create an account and verify to sign in.");
@@ -75,9 +78,14 @@ const DoctorLogin = () => {
       if (data.user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role, status')
+          .select('role, status, email')
           .eq('id', data.user.id)
           .single();
+
+        // Self-Healing: Sync email to profiles table if missing
+        if (profile && !(profile as any).email) {
+          await supabase.from('profiles').update({ email: trimmedEmail }).eq('id', data.user.id);
+        }
 
         if (profile?.role !== 'doctor') {
           await supabase.auth.signOut();

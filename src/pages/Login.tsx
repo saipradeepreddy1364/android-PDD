@@ -72,15 +72,20 @@ const Login = () => {
         // Any error that isn't specifically about unconfirmed email is likely a credential issue
         if (!error.message.toLowerCase().includes("email not confirmed")) {
           // Reliable existence check via profiles table
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('id')
             .eq('email', trimmedEmail)
             .maybeSingle();
 
-          if (profile) {
+          if (profileError) {
+            console.error("Profile check error:", profileError);
+            // Fallback to generic message if we can't reliably check existence
+            showAlert("Login Failed", "Incorrect email or password. Please try again.");
+          } else if (profile) {
             showAlert("Incorrect Password", "The password you entered is incorrect. Please try again or reset your password.");
           } else {
+            // Only show 'Account Not Found' if we are absolutely sure (query succeeded and returned nothing)
             showAlert("Account Not Found", "This email is not registered. Please create an account and verify to sign in.");
           }
         } else {
@@ -107,6 +112,11 @@ const Login = () => {
           .select('*')
           .eq('id', data.session.user.id)
           .single();
+
+        // Self-Healing: Sync email to profiles table if missing
+        if (profile && !profile.email) {
+          await supabase.from('profiles').update({ email: trimmedEmail }).eq('id', data.session.user.id);
+        }
 
         if (profile?.role === 'organization' && !data.session.user.email_confirmed_at) {
           showAlert("Email Verification Required", "Please create your account again and verify your email to sign in.");
