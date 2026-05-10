@@ -78,15 +78,21 @@ const Login = () => {
             .eq('email', trimmedEmail)
             .maybeSingle();
 
-          if (profileError) {
-            console.error("Profile check error:", profileError);
-            // Fallback to generic message if we can't reliably check existence
-            showAlert("Login Failed", "Incorrect email or password. Please try again.");
-          } else if (profile) {
+          if (profile) {
             showAlert("Incorrect Password", "The password you entered is incorrect. Please try again or reset your password.");
           } else {
-            // Only show 'Account Not Found' if we are absolutely sure (query succeeded and returned nothing)
-            showAlert("Account Not Found", "This email is not registered. Please create an account and verify to sign in.");
+            // Fallback: Check Auth system directly via background signup attempt
+            // This handles cases where profile exists but email field is missing/out of sync
+            const { error: signUpError } = await supabase.auth.signUp({
+              email: trimmedEmail,
+              password: "DUMMY_CHECK_PWD_" + Math.random().toString(36),
+            });
+
+            if (signUpError?.message.toLowerCase().includes("already registered")) {
+              showAlert("Incorrect Password", "The password you entered is incorrect. Please try again or reset your password.");
+            } else {
+              showAlert("Account Not Found", "This email is not registered. Please create an account and verify to sign in.");
+            }
           }
         } else {
           // Trigger OTP flow directly from Login
