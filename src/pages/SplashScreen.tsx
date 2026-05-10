@@ -94,7 +94,11 @@ const SplashScreen = () => {
           navigation.replace("Dashboard");
         }
       } else {
-        navigation.replace("Login");
+        // Prevent redirecting if we are on a deep link like reset-password
+        const isResetPasswordRoute = Platform.OS === 'web' && typeof window !== 'undefined' && window.location.pathname.includes('reset-password');
+        if (!isResetPasswordRoute) {
+          navigation.replace("Login");
+        }
       }
     };
 

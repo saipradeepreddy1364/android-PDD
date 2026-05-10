@@ -72,11 +72,10 @@ const Login = () => {
         // Any error that isn't specifically about unconfirmed email is likely a credential issue
         if (!error.message.toLowerCase().includes("email not confirmed")) {
           // Reliable existence check via profiles table
-          // Existence check via profiles table (fuzzy)
           const { data: profile } = await supabase
             .from('profiles')
             .select('id')
-            .ilike('email', trimmedEmail)
+            .eq('email', trimmedEmail)
             .maybeSingle();
 
           if (profile) {
