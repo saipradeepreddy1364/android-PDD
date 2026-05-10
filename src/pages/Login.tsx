@@ -72,26 +72,25 @@ const Login = () => {
         // Any error that isn't specifically about unconfirmed email is likely a credential issue
         if (!error.message.toLowerCase().includes("email not confirmed")) {
           // Reliable existence check via profiles table
-          const { data: profile, error: profileError } = await supabase
+          const { data: profile } = await supabase
             .from('profiles')
             .select('id')
             .eq('email', trimmedEmail)
             .maybeSingle();
 
           if (profile) {
-            showAlert("Incorrect Password", "The password you entered is incorrect. Please try again or reset your password.");
+            showAlert("Login Failed", "Incorrect email or password. Please try again.");
           } else {
-            // Fallback: Check Auth system directly via background signup attempt
-            // This handles cases where profile exists but email field is missing/out of sync
+            // Check Auth system directly to be 100% sure
             const { error: signUpError } = await supabase.auth.signUp({
               email: trimmedEmail,
               password: "DUMMY_CHECK_PWD_" + Math.random().toString(36),
             });
 
             if (signUpError?.message.toLowerCase().includes("already registered")) {
-              showAlert("Incorrect Password", "The password you entered is incorrect. Please try again or reset your password.");
+              showAlert("Login Failed", "Incorrect email or password. Please try again.");
             } else {
-              showAlert("Account Not Found", "This email is not registered. Please create an account and verify to sign in.");
+              showAlert("Account Not Found", "This email is not registered. Please register to get access.");
             }
           }
         } else {
