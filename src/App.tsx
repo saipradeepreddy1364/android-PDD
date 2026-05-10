@@ -14,6 +14,7 @@ import Login from "./pages/Login";
 import DoctorLogin from "./pages/DoctorLogin";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import OrgDashboard from "./pages/OrgDashboard";
 import OrgCases from "./pages/OrgCases";
@@ -35,6 +36,16 @@ const queryClient = new QueryClient();
 
 const App = () => {
   useRealtimeNotifications();
+
+  const linking = {
+    prefixes: [Platform.OS === 'web' ? window.location.origin : 'clinlab://'],
+    config: {
+      screens: {
+        ResetPassword: 'reset-password',
+        ForgotPassword: 'forgot-password',
+      },
+    },
+  };
   
   return (
     <QueryClientProvider client={queryClient}>
@@ -43,7 +54,7 @@ const App = () => {
           <SafeAreaProvider>
             <NetworkGuard />
             <AuthWrapper>
-              <NavigationContainer>
+              <NavigationContainer linking={linking}>
               <StatusBar style="auto" />
               <Stack.Navigator 
                 initialRouteName="SplashScreen"
@@ -59,6 +70,7 @@ const App = () => {
                 <Stack.Screen name="DoctorLogin" component={DoctorLogin} />
                 <Stack.Screen name="Signup" component={Signup} />
                 <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
+                <Stack.Screen name="ResetPassword" component={ResetPassword} />
                 
                 {/* Authenticated Routes */}
                 <Stack.Screen name="Dashboard" component={Dashboard} />

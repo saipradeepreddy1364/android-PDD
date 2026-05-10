@@ -70,7 +70,18 @@ const Login = () => {
 
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
-          showAlert("Login Failed", "Incorrect email or password. Please ensure you have created an account and verified your email.");
+          // Check if the account even exists in profiles
+          const { data: exists } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', trimmedEmail)
+            .maybeSingle();
+
+          if (!exists) {
+            showAlert("Account Not Found", "No account is registered with this email. Please sign up to create one.");
+          } else {
+            showAlert("Incorrect Password", "The password you entered is incorrect. Please try again or reset your password.");
+          }
         } else if (error.message.toLowerCase().includes("email not confirmed")) {
           // Trigger OTP flow directly from Login
           setLoading(true);

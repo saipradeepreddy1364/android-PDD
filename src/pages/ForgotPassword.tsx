@@ -128,8 +128,8 @@ const ForgotPassword = () => {
                "Reset Password"}
             </Text>
             <Text style={styles.subtitle}>
-              {step === 1 ? "Enter your email to receive a recovery code." : 
-               step === 2 ? `Enter the 6-digit code sent to ${email}` : 
+              {step === 1 ? "Enter your email to receive a recovery link and code." : 
+               step === 2 ? `Check your email ${email}. You can either click the recovery link or enter the 6-digit code below.` : 
                "Create a strong new password for your account."}
             </Text>
           </View>

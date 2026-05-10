@@ -351,6 +351,7 @@ const Signup = () => {
           specialization: authType === "doctor" ? formData.specialization : null,
           org_id: authType === "doctor" ? formData.organization.id : null,
           org_name: authType === "doctor" ? formData.organization.name : formData.name,
+          email: formData.email.toLowerCase().trim(),
         };
 
         const { error: profileError } = await supabase
