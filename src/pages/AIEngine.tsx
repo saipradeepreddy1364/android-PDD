@@ -188,10 +188,28 @@ const AIEngine = () => {
     setLoading(true);
 
     try {
+      let relevantLabContext = "";
+      
+      if (stage.trim()) {
+        const stageQuery = stage.toLowerCase().trim();
+        // @ts-ignore
+        const diasDataset = require("@/data/dias_lab_workflow.json");
+        
+        const matchedProcedure = diasDataset.procedures.find((p: any) => 
+          p.category.toLowerCase().includes(stageQuery) || 
+          p.work_type.toLowerCase().includes(stageQuery) ||
+          p.steps.some((s: any) => s.name.toLowerCase().includes(stageQuery))
+        );
+        
+        if (matchedProcedure) {
+          relevantLabContext = `\n\n[CRITICAL LAB WORKFLOW DATA]\nYou MUST use the following lab workflow for your response:\nCategory: ${matchedProcedure.category}\nWork Type: ${matchedProcedure.work_type}\nLab Steps:\n${matchedProcedure.steps.map((s: any) => `- Step ${s.order}: ${s.name} (Component: ${s.component}, Cost: ${s.cost})`).join('\n')}\n`;
+        }
+      }
+
       const combinedInput = `Patient Symptoms: ${symptoms}\nProcedure Stage: ${stage}\nDoctor Observations: ${input}`;
 
       const prompt = `You are an expert dental AI assistant. Based on the following clinical input, provide a diagnostic assessment and procedural guidance.
-Input: ${combinedInput}
+Input: ${combinedInput}${relevantLabContext}
 
 You MUST return ONLY a valid JSON object with the exact following structure, no markdown formatting or backticks:
 {
