@@ -6,7 +6,7 @@ import { useAppData } from "@/lib/AppDataContext";
 
 const SplashScreen = () => {
   const navigation = useNavigation<any>();
-  const { setData, setIsPreloaded } = useAppData();
+  const { data, setData, setIsPreloaded } = useAppData();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -82,8 +82,8 @@ const SplashScreen = () => {
           setIsPreloaded(true);
           return { session, role };
         })(),
-        // Minimum 4-second display timer
-        new Promise(resolve => setTimeout(resolve, 4000)),
+        // Minimum 4-second display timer (skip if already loaded data)
+        new Promise(resolve => setTimeout(resolve, data?.profile ? 0 : 4000)),
       ]);
 
       // Prevent redirecting if we are on a deep link like reset-password
