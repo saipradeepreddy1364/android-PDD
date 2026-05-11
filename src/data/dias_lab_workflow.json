@@ -1,0 +1,2309 @@
+{
+  "meta": {
+    "title": "DIAS Template – Dental Lab Workflow Dataset",
+    "source": "STC LAB DIAS Format (UG, Fellowship & PG)",
+    "date": "2025-03-10",
+    "description": "Each procedure lists sequential lab steps. Every step carries a next_steps array of step IDs that follow it in the lab workflow."
+  },
+  "procedures": [
+
+    {
+      "id": "SM-001",
+      "category": "SPACE MAINTAINER",
+      "work_type": "SPACE MAINTAINER",
+      "steps": [
+        {
+          "id": "SM-001-S1",
+          "order": 1,
+          "name": "Oral Appliance – Gropers",
+          "component": "Gropers",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "550 per arch",
+          "is_final": false,
+          "next_steps": ["SM-001-S2"]
+        },
+        {
+          "id": "SM-001-S2",
+          "order": 2,
+          "name": "Oral Appliance – Space Maintainer",
+          "component": "Space Maintainer",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "175 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "SPL-001",
+      "category": "SPLINT",
+      "work_type": "HARD SPLINT",
+      "steps": [
+        {
+          "id": "SPL-001-S1",
+          "order": 1,
+          "name": "Splint Fabrication",
+          "component": "Hard Splint",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "175 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "SPL-002",
+      "category": "SPLINT",
+      "work_type": "SOFT SPLINT",
+      "steps": [
+        {
+          "id": "SPL-002-S1",
+          "order": 1,
+          "name": "Splint Fabrication",
+          "component": "Soft Splint",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "175 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "IMP-001",
+      "category": "IMPLANT",
+      "work_type": "JIG TRIAL",
+      "steps": [
+        {
+          "id": "IMP-001-S1",
+          "order": 1,
+          "name": "Secondary Cast",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["IMP-001-S2"]
+        },
+        {
+          "id": "IMP-001-S2",
+          "order": 2,
+          "name": "Verification Jig",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "IMP-002",
+      "category": "IMPLANT",
+      "work_type": "MONOLITHIC",
+      "steps": [
+        {
+          "id": "IMP-002-S1",
+          "order": 1,
+          "name": "Crown Fabrication",
+          "component": "Monolithic Crown",
+          "brand": "Chinese Zirconia",
+          "teeth": "Teeth no",
+          "cost": "1000 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "IMP-003",
+      "category": "IMPLANT",
+      "work_type": "HAND LAYERED CROWN",
+      "steps": [
+        {
+          "id": "IMP-003-S1",
+          "order": 1,
+          "name": "Ceramic Coping",
+          "component": "Hand Layered Crown",
+          "brand": "Chinese Zirconia",
+          "teeth": "Teeth no",
+          "cost": "1300 per unit",
+          "is_final": false,
+          "next_steps": ["IMP-003-S2"]
+        },
+        {
+          "id": "IMP-003-S2",
+          "order": 2,
+          "name": "Bisque Trial",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "IMP-004",
+      "category": "IMPLANT",
+      "work_type": "METAL CERAMIC",
+      "steps": [
+        {
+          "id": "IMP-004-S1",
+          "order": 1,
+          "name": "FPD Wax Pattern",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["IMP-004-S2"]
+        },
+        {
+          "id": "IMP-004-S2",
+          "order": 2,
+          "name": "Metal Coping",
+          "component": "Metal Ceramic Crown",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "1300 per unit",
+          "is_final": false,
+          "next_steps": ["IMP-004-S3"]
+        },
+        {
+          "id": "IMP-004-S3",
+          "order": 3,
+          "name": "Bisque Trial",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "IMP-005",
+      "category": "IMPLANT",
+      "work_type": "METAL WITH CERAMIC FACING",
+      "steps": [
+        {
+          "id": "IMP-005-S1",
+          "order": 1,
+          "name": "FPD Wax Pattern",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["IMP-005-S2"]
+        },
+        {
+          "id": "IMP-005-S2",
+          "order": 2,
+          "name": "Ceramic Facing",
+          "component": "Metal Ceramic Crown",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "1300 per unit",
+          "is_final": false,
+          "next_steps": ["IMP-005-S3"]
+        },
+        {
+          "id": "IMP-005-S3",
+          "order": 3,
+          "name": "Bisque Trial",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "IMP-006",
+      "category": "IMPLANT",
+      "work_type": "IMPLANT CASTABLE ABUTMENT",
+      "steps": [
+        {
+          "id": "IMP-006-S1",
+          "order": 1,
+          "name": "Implant Wax Pattern",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["IMP-006-S2"]
+        },
+        {
+          "id": "IMP-006-S2",
+          "order": 2,
+          "name": "Metal Cast Custom Abutment",
+          "component": "Metal Ceramic Crown",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "1300 per unit",
+          "is_final": false,
+          "next_steps": ["IMP-006-S3"]
+        },
+        {
+          "id": "IMP-006-S3",
+          "order": 3,
+          "name": "Bisque Trial",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "OS-001",
+      "category": "OUT SOURCING",
+      "work_type": "GINGIVAL PORCELAIN",
+      "steps": [
+        {
+          "id": "OS-001-S1",
+          "order": 1,
+          "name": "Crown Fabrication",
+          "component": "E-max Gingival Porcelain",
+          "brand": "Out Source",
+          "teeth": "Teeth no",
+          "cost": "225 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "OS-002",
+      "category": "OUT SOURCING",
+      "work_type": "ALL CERAMIC CROWN",
+      "steps": [
+        {
+          "id": "OS-002-S1",
+          "order": 1,
+          "name": "Crown Fabrication",
+          "component": "E-max Crown",
+          "brand": "E-max Crown OS",
+          "teeth": "Teeth no",
+          "cost": "3600 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "OS-003",
+      "category": "OUT SOURCING",
+      "work_type": "VENEER",
+      "steps": [
+        {
+          "id": "OS-003-S1",
+          "order": 1,
+          "name": "E-max Veneer Outsource",
+          "component": "E-max Veneer",
+          "brand": "E-max Veneer OS",
+          "teeth": "Teeth no",
+          "cost": "3600 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "MB-001",
+      "category": "MARYLAND BRIDGE",
+      "work_type": "FPD WAX PATTERN",
+      "steps": [
+        {
+          "id": "MB-001-S1",
+          "order": 1,
+          "name": "FPD Wax Pattern",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "MB-002",
+      "category": "MARYLAND BRIDGE",
+      "work_type": "MARYLAND BRIDGE",
+      "steps": [
+        {
+          "id": "MB-002-S1",
+          "order": 1,
+          "name": "Maryland Bridge – Retainer",
+          "component": "Maryland Retainer",
+          "brand": "Metal",
+          "teeth": "Abutment Teeth no only",
+          "cost": "200 per abutment",
+          "is_final": false,
+          "next_steps": ["MB-002-S2"]
+        },
+        {
+          "id": "MB-002-S2",
+          "order": 2,
+          "name": "Maryland Bridge – Pontic",
+          "component": "Maryland Pontic",
+          "brand": "Metal Ceramic",
+          "teeth": "Pontic Teeth no only",
+          "cost": "1300 per pontic",
+          "is_final": false,
+          "next_steps": ["MB-002-S3"]
+        },
+        {
+          "id": "MB-002-S3",
+          "order": 3,
+          "name": "Bisque Trial (Layering)",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Pontic Teeth no only",
+          "cost": "0",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "WS-001",
+      "category": "WELDING / SOLDERING",
+      "work_type": "WELDING / SOLDERING",
+      "steps": [
+        {
+          "id": "WS-001-S1",
+          "order": 1,
+          "name": "Welding / Soldering",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "TC-001",
+      "category": "TELESCOPIC COPING",
+      "work_type": "PRIMARY & SECONDARY COPING",
+      "steps": [
+        {
+          "id": "TC-001-S1",
+          "order": 1,
+          "name": "Primary Coping",
+          "component": "All Metal Crown",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "400",
+          "is_final": false,
+          "next_steps": ["TC-001-S2"]
+        },
+        {
+          "id": "TC-001-S2",
+          "order": 2,
+          "name": "Secondary Coping",
+          "component": "All Metal Crown",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "400",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "PSI-001",
+      "category": "PSI FINISHING & POLISHING",
+      "work_type": "PSI FINISHING & POLISHING",
+      "steps": [
+        {
+          "id": "PSI-001-S1",
+          "order": 1,
+          "name": "PSI Finishing & Polishing",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "CPD-001",
+      "category": "CAST PARTIAL DENTURE",
+      "work_type": "DMLS – Co-cr",
+      "steps": [
+        {
+          "id": "CPD-001-S1",
+          "order": 1,
+          "name": "Cast Pouring (Secondary Cast)",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CPD-001-S2"]
+        },
+        {
+          "id": "CPD-001-S2",
+          "order": 2,
+          "name": "CPD Designing",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CPD-001-S3"]
+        },
+        {
+          "id": "CPD-001-S3",
+          "order": 3,
+          "name": "DMLS Printing",
+          "component": "Metal Denture Base",
+          "brand": "Co-cr",
+          "teeth": "Upper/Lower arch",
+          "cost": "1000 per arch",
+          "is_final": false,
+          "next_steps": ["CPD-001-S4"]
+        },
+        {
+          "id": "CPD-001-S4",
+          "order": 4,
+          "name": "Articulation",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Both Arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CPD-001-S5"]
+        },
+        {
+          "id": "CPD-001-S5",
+          "order": 5,
+          "name": "CPD Teeth Setting",
+          "component": "Teeth Set",
+          "brand": "Acryrock",
+          "teeth": "Missing Teeth no",
+          "cost": "10 per teeth",
+          "is_final": false,
+          "next_steps": ["CPD-001-S6"]
+        },
+        {
+          "id": "CPD-001-S6",
+          "order": 6,
+          "name": "CPD Processing",
+          "component": "Acrylic Denture Base",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "60 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "CPD-002",
+      "category": "CAST PARTIAL DENTURE",
+      "work_type": "DMLS – Titanium",
+      "steps": [
+        {
+          "id": "CPD-002-S1",
+          "order": 1,
+          "name": "Cast Pouring (Secondary Cast)",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CPD-002-S2"]
+        },
+        {
+          "id": "CPD-002-S2",
+          "order": 2,
+          "name": "CPD Designing",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CPD-002-S3"]
+        },
+        {
+          "id": "CPD-002-S3",
+          "order": 3,
+          "name": "DMLS Printing",
+          "component": "Metal Denture Base",
+          "brand": "Titanium",
+          "teeth": "Upper/Lower arch",
+          "cost": "2500 per arch",
+          "is_final": false,
+          "next_steps": ["CPD-002-S4"]
+        },
+        {
+          "id": "CPD-002-S4",
+          "order": 4,
+          "name": "Articulation",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Both Arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CPD-002-S5"]
+        },
+        {
+          "id": "CPD-002-S5",
+          "order": 5,
+          "name": "CPD Teeth Setting",
+          "component": "Teeth Set",
+          "brand": "Acryrock",
+          "teeth": "Missing Teeth no",
+          "cost": "10 per teeth",
+          "is_final": false,
+          "next_steps": ["CPD-002-S6"]
+        },
+        {
+          "id": "CPD-002-S6",
+          "order": 6,
+          "name": "CPD Processing",
+          "component": "Acrylic Denture Base",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "60 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "CPD-003",
+      "category": "CAST PARTIAL DENTURE",
+      "work_type": "MANUAL",
+      "steps": [
+        {
+          "id": "CPD-003-S1",
+          "order": 1,
+          "name": "Cast Pouring (Secondary Cast)",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CPD-003-S2"]
+        },
+        {
+          "id": "CPD-003-S2",
+          "order": 2,
+          "name": "Block Out",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CPD-003-S3"]
+        },
+        {
+          "id": "CPD-003-S3",
+          "order": 3,
+          "name": "CPD Wax Pattern",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CPD-003-S4"]
+        },
+        {
+          "id": "CPD-003-S4",
+          "order": 4,
+          "name": "CPD Metal Denture Base (RPD Framework)",
+          "component": "Metal Denture Base",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "1500 per arch",
+          "is_final": false,
+          "next_steps": ["CPD-003-S5"]
+        },
+        {
+          "id": "CPD-003-S5",
+          "order": 5,
+          "name": "Articulation",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Both Arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CPD-003-S6"]
+        },
+        {
+          "id": "CPD-003-S6",
+          "order": 6,
+          "name": "CPD Teeth Setting",
+          "component": "Teeth Set",
+          "brand": "Acryrock",
+          "teeth": "Missing Teeth no",
+          "cost": "10 per teeth",
+          "is_final": false,
+          "next_steps": ["CPD-003-S7"]
+        },
+        {
+          "id": "CPD-003-S7",
+          "order": 7,
+          "name": "CPD Processing",
+          "component": "Acrylic Denture Base",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "60 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FD-001",
+      "category": "FLEXIBLE DENTURE",
+      "work_type": "FLEXIBLE DENTURE – Bredent Polyan",
+      "steps": [
+        {
+          "id": "FD-001-S1",
+          "order": 1,
+          "name": "Cast Pouring (Secondary Cast)",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FD-001-S2"]
+        },
+        {
+          "id": "FD-001-S2",
+          "order": 2,
+          "name": "Block Out",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FD-001-S3"]
+        },
+        {
+          "id": "FD-001-S3",
+          "order": 3,
+          "name": "Wax Pattern",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FD-001-S4"]
+        },
+        {
+          "id": "FD-001-S4",
+          "order": 4,
+          "name": "Flexible Denture Base (RPD Framework)",
+          "component": "Flexible Denture Base",
+          "brand": "Biodentaplast",
+          "teeth": "Upper/Lower arch",
+          "cost": "800",
+          "is_final": false,
+          "next_steps": ["FD-001-S5"]
+        },
+        {
+          "id": "FD-001-S5",
+          "order": 5,
+          "name": "Articulation",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Both Arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FD-001-S6"]
+        },
+        {
+          "id": "FD-001-S6",
+          "order": 6,
+          "name": "CPD Teeth Setting",
+          "component": "Teeth Set",
+          "brand": "Acryrock",
+          "teeth": "Missing Teeth no",
+          "cost": "10 per teeth",
+          "is_final": false,
+          "next_steps": ["FD-001-S7"]
+        },
+        {
+          "id": "FD-001-S7",
+          "order": 7,
+          "name": "Flexible Denture Processing",
+          "component": "Flexible Denture Base",
+          "brand": "Bredent Polyan",
+          "teeth": "Upper/Lower arch",
+          "cost": "800 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FD-002",
+      "category": "FLEXIBLE DENTURE",
+      "work_type": "FLEXIBLE DENTURE – Bredent Second Edition",
+      "steps": [
+        {
+          "id": "FD-002-S1",
+          "order": 1,
+          "name": "Cast Pouring (Secondary Cast)",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FD-002-S2"]
+        },
+        {
+          "id": "FD-002-S2",
+          "order": 2,
+          "name": "Block Out",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FD-002-S3"]
+        },
+        {
+          "id": "FD-002-S3",
+          "order": 3,
+          "name": "Wax Pattern",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FD-002-S4"]
+        },
+        {
+          "id": "FD-002-S4",
+          "order": 4,
+          "name": "Flexible Denture Base (RPD Framework)",
+          "component": "Flexible Denture Base",
+          "brand": "Biodentaplast",
+          "teeth": "Upper/Lower arch",
+          "cost": "800",
+          "is_final": false,
+          "next_steps": ["FD-002-S5"]
+        },
+        {
+          "id": "FD-002-S5",
+          "order": 5,
+          "name": "Articulation",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Both Arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FD-002-S6"]
+        },
+        {
+          "id": "FD-002-S6",
+          "order": 6,
+          "name": "CPD Teeth Setting",
+          "component": "Teeth Set",
+          "brand": "Acryrock",
+          "teeth": "Missing Teeth no",
+          "cost": "10 per teeth",
+          "is_final": false,
+          "next_steps": ["FD-002-S7"]
+        },
+        {
+          "id": "FD-002-S7",
+          "order": 7,
+          "name": "Flexible Denture Processing",
+          "component": "Flexible Denture Base",
+          "brand": "Bredent Second Edition",
+          "teeth": "Upper/Lower arch",
+          "cost": "800 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "MF-001",
+      "category": "MALO FRAMEWORK",
+      "work_type": "MALO FRAMEWORK",
+      "steps": [
+        {
+          "id": "MF-001-S1",
+          "order": 1,
+          "name": "DMLS Printing",
+          "component": "Malo Framework",
+          "brand": "Titanium",
+          "teeth": "Upper Arch/Lower arch",
+          "cost": "5000 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "MU-001",
+      "category": "MOCK UP",
+      "work_type": "MOCK UP MANUAL",
+      "steps": [
+        {
+          "id": "MU-001-S1",
+          "order": 1,
+          "name": "Diagnostic Wax Up – Manual",
+          "component": "Mock Up",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "50 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "MU-002",
+      "category": "MOCK UP",
+      "work_type": "MOCK UP CADCAM (Digitally)",
+      "steps": [
+        {
+          "id": "MU-002-S1",
+          "order": 1,
+          "name": "Diagnostic Wax Up – CADCAM",
+          "component": "Mock Up",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "50 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "PMMA-001",
+      "category": "PMMA DESIGN AND MILLING (CADCAM)",
+      "work_type": "PMMA-ML",
+      "steps": [
+        {
+          "id": "PMMA-001-S1",
+          "order": 1,
+          "name": "PMMA CADCAM Milling",
+          "component": "ML Acrylic Temporary Crown",
+          "brand": "PMMA-ML",
+          "teeth": "Teeth no",
+          "cost": "500 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "PMMA-002",
+      "category": "PMMA DESIGN AND MILLING (CADCAM)",
+      "work_type": "PMMA-M",
+      "steps": [
+        {
+          "id": "PMMA-002-S1",
+          "order": 1,
+          "name": "PMMA CADCAM Milling",
+          "component": "Monolayer Acrylic Temp Crown",
+          "brand": "PMMA-M",
+          "teeth": "Teeth no",
+          "cost": "50 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "TAC-001",
+      "category": "TEMPORARY ACRYLIC CROWN",
+      "work_type": "TEMPORARY ACRYLIC CROWN (MANUAL)",
+      "steps": [
+        {
+          "id": "TAC-001-S1",
+          "order": 1,
+          "name": "Temporary Acrylic Crown Fabrication",
+          "component": "Temporary Crown",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "50 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "RA-001",
+      "category": "REMOVABLE APPLIANCE",
+      "work_type": "HAWLEY'S APPLIANCE",
+      "steps": [
+        {
+          "id": "RA-001-S1",
+          "order": 1,
+          "name": "Oral Appliance – Hawley's Appliance",
+          "component": "Hawley's Appliance",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "175 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "RA-002",
+      "category": "REMOVABLE APPLIANCE",
+      "work_type": "LIP BUMPER",
+      "steps": [
+        {
+          "id": "RA-002-S1",
+          "order": 1,
+          "name": "Oral Appliance – Lip Bumper",
+          "component": "Lip Bumper",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "175 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "RA-003",
+      "category": "REMOVABLE APPLIANCE",
+      "work_type": "INCLINED PLANE",
+      "steps": [
+        {
+          "id": "RA-003-S1",
+          "order": 1,
+          "name": "Oral Appliance – Inclined Plane",
+          "component": "Inclined Plane",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "175 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "RA-004",
+      "category": "REMOVABLE APPLIANCE",
+      "work_type": "BAND & LOOP",
+      "steps": [
+        {
+          "id": "RA-004-S1",
+          "order": 1,
+          "name": "Oral Appliance – Band & Loop",
+          "component": "Band & Loop",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "175 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "RA-005",
+      "category": "REMOVABLE APPLIANCE",
+      "work_type": "BEGG'S RETAINER",
+      "steps": [
+        {
+          "id": "RA-005-S1",
+          "order": 1,
+          "name": "Oral Appliance – Begg's Retainer",
+          "component": "Begg's Retainer",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "175 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "RA-006",
+      "category": "REMOVABLE APPLIANCE",
+      "work_type": "BITE PLANE",
+      "steps": [
+        {
+          "id": "RA-006-S1",
+          "order": 1,
+          "name": "Oral Appliance – Bite Plane",
+          "component": "Bite Plane",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "175 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "RA-007",
+      "category": "REMOVABLE APPLIANCE",
+      "work_type": "NANCE PALATAL",
+      "steps": [
+        {
+          "id": "RA-007-S1",
+          "order": 1,
+          "name": "Oral Appliance – Nance Palatal",
+          "component": "Nance Palatal",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "200 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "RA-008",
+      "category": "REMOVABLE APPLIANCE",
+      "work_type": "LINGUAL ARCH",
+      "steps": [
+        {
+          "id": "RA-008-S1",
+          "order": 1,
+          "name": "Oral Appliance – Lingual Arch",
+          "component": "Lingual Arch",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "200 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "RA-009",
+      "category": "REMOVABLE APPLIANCE",
+      "work_type": "DISTAL SHOE",
+      "steps": [
+        {
+          "id": "RA-009-S1",
+          "order": 1,
+          "name": "Oral Appliance – Distal Shoe",
+          "component": "Distal Shoe",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "250 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "RA-010",
+      "category": "REMOVABLE APPLIANCE",
+      "work_type": "TRANSPALATAL",
+      "steps": [
+        {
+          "id": "RA-010-S1",
+          "order": 1,
+          "name": "Oral Appliance – Transpalatal",
+          "component": "Transpalatal",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "200 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "RA-011",
+      "category": "REMOVABLE APPLIANCE",
+      "work_type": "HABIT BRAKING",
+      "steps": [
+        {
+          "id": "RA-011-S1",
+          "order": 1,
+          "name": "Oral Appliance – Habit Braking",
+          "component": "Habit Braking",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "250 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FVC-001",
+      "category": "FVC (SINGLE CROWN)",
+      "work_type": "METAL WITH CERAMIC FACING",
+      "steps": [
+        {
+          "id": "FVC-001-S1",
+          "order": 1,
+          "name": "Secondary Cast",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FVC-001-S2"]
+        },
+        {
+          "id": "FVC-001-S2",
+          "order": 2,
+          "name": "FVC Wax Pattern",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FVC-001-S3"]
+        },
+        {
+          "id": "FVC-001-S3",
+          "order": 3,
+          "name": "Ceramic Facing",
+          "component": "Metal Ceramic Crown",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "1300 per unit",
+          "is_final": false,
+          "next_steps": ["FVC-001-S4"]
+        },
+        {
+          "id": "FVC-001-S4",
+          "order": 4,
+          "name": "Bisque Trial",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FVC-002",
+      "category": "FVC (SINGLE CROWN)",
+      "work_type": "MONOLITHIC CROWN",
+      "steps": [
+        {
+          "id": "FVC-002-S1",
+          "order": 1,
+          "name": "Secondary Cast",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FVC-002-S2"]
+        },
+        {
+          "id": "FVC-002-S2",
+          "order": 2,
+          "name": "Crown Fabrication",
+          "component": "Monolithic Crown",
+          "brand": "Chinese Zirconia",
+          "teeth": "Teeth no",
+          "cost": "1000 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FVC-003",
+      "category": "FVC (SINGLE CROWN)",
+      "work_type": "HAND LAYERED CROWN",
+      "steps": [
+        {
+          "id": "FVC-003-S1",
+          "order": 1,
+          "name": "Secondary Cast",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FVC-003-S2"]
+        },
+        {
+          "id": "FVC-003-S2",
+          "order": 2,
+          "name": "Ceramic Coping",
+          "component": "Hand Layered Crown",
+          "brand": "Chinese Zirconia",
+          "teeth": "Teeth no",
+          "cost": "1300 per unit",
+          "is_final": false,
+          "next_steps": ["FVC-003-S3"]
+        },
+        {
+          "id": "FVC-003-S3",
+          "order": 3,
+          "name": "Bisque Trial",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FVC-004",
+      "category": "FVC (SINGLE CROWN)",
+      "work_type": "METAL ENDO CROWN",
+      "steps": [
+        {
+          "id": "FVC-004-S1",
+          "order": 1,
+          "name": "Secondary Cast",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FVC-004-S2"]
+        },
+        {
+          "id": "FVC-004-S2",
+          "order": 2,
+          "name": "FVC Wax Pattern",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FVC-004-S3"]
+        },
+        {
+          "id": "FVC-004-S3",
+          "order": 3,
+          "name": "Endo Crown Fabrication",
+          "component": "Metal Endo Crown",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "800 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FVC-005",
+      "category": "FVC (SINGLE CROWN)",
+      "work_type": "CERAMIC ENDO CROWN",
+      "steps": [
+        {
+          "id": "FVC-005-S1",
+          "order": 1,
+          "name": "Secondary Cast",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FVC-005-S2"]
+        },
+        {
+          "id": "FVC-005-S2",
+          "order": 2,
+          "name": "Endo Crown Fabrication",
+          "component": "Ceramic Endo Crown",
+          "brand": "Chinese Zirconia",
+          "teeth": "Teeth no",
+          "cost": "1000 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FVC-006",
+      "category": "FVC (SINGLE CROWN)",
+      "work_type": "EMAX",
+      "steps": [
+        {
+          "id": "FVC-006-S1",
+          "order": 1,
+          "name": "Crown Fabrication",
+          "component": "Monolithic Crown",
+          "brand": "German Zirconia",
+          "teeth": "Teeth no",
+          "cost": "2000 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FPD-001",
+      "category": "FPD (FIXED PARTIAL DENTURE)",
+      "work_type": "MONOLITHIC CROWN",
+      "steps": [
+        {
+          "id": "FPD-001-S1",
+          "order": 1,
+          "name": "Secondary Cast",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FPD-001-S2"]
+        },
+        {
+          "id": "FPD-001-S2",
+          "order": 2,
+          "name": "Crown Fabrication",
+          "component": "Monolithic Crown",
+          "brand": "Chinese Zirconia",
+          "teeth": "Teeth no",
+          "cost": "1000 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FPD-002",
+      "category": "FPD (FIXED PARTIAL DENTURE)",
+      "work_type": "HAND LAYERED CROWN",
+      "steps": [
+        {
+          "id": "FPD-002-S1",
+          "order": 1,
+          "name": "Secondary Cast",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FPD-002-S2"]
+        },
+        {
+          "id": "FPD-002-S2",
+          "order": 2,
+          "name": "Ceramic Coping",
+          "component": "Hand Layered Crown",
+          "brand": "Chinese Zirconia",
+          "teeth": "Teeth no",
+          "cost": "1300 per unit",
+          "is_final": false,
+          "next_steps": ["FPD-002-S3"]
+        },
+        {
+          "id": "FPD-002-S3",
+          "order": 3,
+          "name": "Bisque Trial",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FPD-003",
+      "category": "FPD (FIXED PARTIAL DENTURE)",
+      "work_type": "FULL METAL CROWN",
+      "steps": [
+        {
+          "id": "FPD-003-S1",
+          "order": 1,
+          "name": "Secondary Cast",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FPD-003-S2"]
+        },
+        {
+          "id": "FPD-003-S2",
+          "order": 2,
+          "name": "FPD Wax Pattern",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FPD-003-S3"]
+        },
+        {
+          "id": "FPD-003-S3",
+          "order": 3,
+          "name": "Crown Fabrication",
+          "component": "All Metal Crown",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "400 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FPD-004",
+      "category": "FPD (FIXED PARTIAL DENTURE)",
+      "work_type": "METAL CERAMIC",
+      "steps": [
+        {
+          "id": "FPD-004-S1",
+          "order": 1,
+          "name": "Secondary Cast",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FPD-004-S2"]
+        },
+        {
+          "id": "FPD-004-S2",
+          "order": 2,
+          "name": "FPD Wax Pattern",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FPD-004-S3"]
+        },
+        {
+          "id": "FPD-004-S3",
+          "order": 3,
+          "name": "Metal Coping",
+          "component": "Metal Ceramic Crown",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "1300 per unit",
+          "is_final": false,
+          "next_steps": ["FPD-004-S4"]
+        },
+        {
+          "id": "FPD-004-S4",
+          "order": 4,
+          "name": "Bisque Trial",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FPD-005",
+      "category": "FPD (FIXED PARTIAL DENTURE)",
+      "work_type": "METAL WITH CERAMIC FACING",
+      "steps": [
+        {
+          "id": "FPD-005-S1",
+          "order": 1,
+          "name": "Secondary Cast",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FPD-005-S2"]
+        },
+        {
+          "id": "FPD-005-S2",
+          "order": 2,
+          "name": "FPD Wax Pattern",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FPD-005-S3"]
+        },
+        {
+          "id": "FPD-005-S3",
+          "order": 3,
+          "name": "Ceramic Facing",
+          "component": "Metal Ceramic Crown",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "1300 per unit",
+          "is_final": false,
+          "next_steps": ["FPD-005-S4"]
+        },
+        {
+          "id": "FPD-005-S4",
+          "order": 4,
+          "name": "Bisque Trial",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FPD-006",
+      "category": "FPD (FIXED PARTIAL DENTURE)",
+      "work_type": "ZIRCONIA COPING",
+      "steps": [
+        {
+          "id": "FPD-006-S1",
+          "order": 1,
+          "name": "Zirconia Milling",
+          "component": "Hand Layered Crown",
+          "brand": "Chinese Zirconia",
+          "teeth": "Teeth no",
+          "cost": "1300 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FPD-007",
+      "category": "FPD (FIXED PARTIAL DENTURE)",
+      "work_type": "ZIRCONIA MONOLITHIC CROWN",
+      "steps": [
+        {
+          "id": "FPD-007-S1",
+          "order": 1,
+          "name": "Zirconia Milling",
+          "component": "Monolithic Crown",
+          "brand": "Chinese Zirconia",
+          "teeth": "Teeth no",
+          "cost": "1000 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FPD-008",
+      "category": "FPD (FIXED PARTIAL DENTURE)",
+      "work_type": "PMMA-ML",
+      "steps": [
+        {
+          "id": "FPD-008-S1",
+          "order": 1,
+          "name": "PMMA Milling",
+          "component": "ML Acrylic Temporary Crown",
+          "brand": "PMMA-ML",
+          "teeth": "Teeth no",
+          "cost": "500 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FPD-009",
+      "category": "FPD (FIXED PARTIAL DENTURE)",
+      "work_type": "PMMA-M",
+      "steps": [
+        {
+          "id": "FPD-009-S1",
+          "order": 1,
+          "name": "PMMA Milling",
+          "component": "Monolayer Acrylic Temp Crown",
+          "brand": "PMMA-M",
+          "teeth": "Teeth no",
+          "cost": "50 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FPD-010",
+      "category": "FPD (FIXED PARTIAL DENTURE)",
+      "work_type": "METAL MILLING (For Crowns and FPD)",
+      "steps": [
+        {
+          "id": "FPD-010-S1",
+          "order": 1,
+          "name": "Metal Milling",
+          "component": "Metal Ceramic Crown",
+          "brand": "Metal",
+          "teeth": "Teeth no",
+          "cost": "1300 per unit",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FPD-011",
+      "category": "FPD (FIXED PARTIAL DENTURE)",
+      "work_type": "WAX MILLING",
+      "steps": [
+        {
+          "id": "FPD-011-S1",
+          "order": 1,
+          "name": "Wax Milling",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FPD-012",
+      "category": "FPD (FIXED PARTIAL DENTURE)",
+      "work_type": "DMLS HYBRID BAR",
+      "steps": [
+        {
+          "id": "FPD-012-S1",
+          "order": 1,
+          "name": "DMLS Printing",
+          "component": "Screw Retained Implant Bar",
+          "brand": "Titanium",
+          "teeth": "Upper/Lower arch",
+          "cost": "2500 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FPD-013",
+      "category": "FPD (FIXED PARTIAL DENTURE)",
+      "work_type": "DMLS CAST PARTIAL DENTURE",
+      "steps": [
+        {
+          "id": "FPD-013-S1",
+          "order": 1,
+          "name": "DMLS Printing",
+          "component": "Metal Denture Base",
+          "brand": "Co-cr",
+          "teeth": "Upper/Lower arch",
+          "cost": "1000 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "CD-001",
+      "category": "CD (COMPLETE DENTURE)",
+      "work_type": "CD – Acryrock Teeth Setting",
+      "steps": [
+        {
+          "id": "CD-001-S1",
+          "order": 1,
+          "name": "CD Special Tray",
+          "component": "Special Tray",
+          "brand": "Generic",
+          "teeth": "Upper Arch/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CD-001-S2"]
+        },
+        {
+          "id": "CD-001-S2",
+          "order": 2,
+          "name": "CD Occlusal Rims – Secondary Cast",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper Arch/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CD-001-S3"]
+        },
+        {
+          "id": "CD-001-S3",
+          "order": 3,
+          "name": "CD Occlusal Rims – Denture Base",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper Arch/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CD-001-S4"]
+        },
+        {
+          "id": "CD-001-S4",
+          "order": 4,
+          "name": "CD Occlusal Rims – Occlusal Rims",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper Arch/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CD-001-S5"]
+        },
+        {
+          "id": "CD-001-S5",
+          "order": 5,
+          "name": "Articulation",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Both Arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CD-001-S6"]
+        },
+        {
+          "id": "CD-001-S6",
+          "order": 6,
+          "name": "CD Teeth Setting",
+          "component": "Teeth Set",
+          "brand": "Acryrock",
+          "teeth": "All 28 teeth number (except 8)",
+          "cost": "280",
+          "is_final": false,
+          "next_steps": ["CD-001-S7"]
+        },
+        {
+          "id": "CD-001-S7",
+          "order": 7,
+          "name": "CD Processing",
+          "component": "Acrylic Denture Base",
+          "brand": "Generic",
+          "teeth": "Upper Arch/Lower arch",
+          "cost": "60 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "CD-002",
+      "category": "CD (COMPLETE DENTURE)",
+      "work_type": "CD – BPS (Ivoclar Teeth)",
+      "steps": [
+        {
+          "id": "CD-002-S1",
+          "order": 1,
+          "name": "CD Special Tray",
+          "component": "Special Tray",
+          "brand": "Generic",
+          "teeth": "Upper Arch/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CD-002-S2"]
+        },
+        {
+          "id": "CD-002-S2",
+          "order": 2,
+          "name": "CD Occlusal Rims – Secondary Cast",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper Arch/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CD-002-S3"]
+        },
+        {
+          "id": "CD-002-S3",
+          "order": 3,
+          "name": "CD Occlusal Rims – Denture Base",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper Arch/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CD-002-S4"]
+        },
+        {
+          "id": "CD-002-S4",
+          "order": 4,
+          "name": "CD Occlusal Rims – Occlusal Rims",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper Arch/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CD-002-S5"]
+        },
+        {
+          "id": "CD-002-S5",
+          "order": 5,
+          "name": "Articulation",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Both Arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["CD-002-S6"]
+        },
+        {
+          "id": "CD-002-S6",
+          "order": 6,
+          "name": "BPS Teeth Setting",
+          "component": "Teeth Set",
+          "brand": "Ivoclar",
+          "teeth": "All 28 teeth number (except 8)",
+          "cost": "50 per teeth",
+          "is_final": false,
+          "next_steps": ["CD-002-S7"]
+        },
+        {
+          "id": "CD-002-S7",
+          "order": 7,
+          "name": "BPS CD Processing",
+          "component": "Acrylic Denture Base",
+          "brand": "Ivoclar",
+          "teeth": "Upper Arch/Lower arch",
+          "cost": "700 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "CD-003",
+      "category": "CD (COMPLETE DENTURE)",
+      "work_type": "CD REPAIR / RELINING / REBASING",
+      "steps": [
+        {
+          "id": "CD-003-S1",
+          "order": 1,
+          "name": "Relining / Rebasing / Repair",
+          "component": "Acrylic Denture Base",
+          "brand": "Generic",
+          "teeth": "Upper Arch/Lower arch",
+          "cost": "60 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "CD-004",
+      "category": "CD (COMPLETE DENTURE)",
+      "work_type": "CD TEETH CORRECTION",
+      "steps": [
+        {
+          "id": "CD-004-S1",
+          "order": 1,
+          "name": "Teeth Setting Correction",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper Arch/Lower arch",
+          "cost": "0",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "TPD-001",
+      "category": "TPD (TRANSITIONAL PARTIAL DENTURE)",
+      "work_type": "TPD",
+      "steps": [
+        {
+          "id": "TPD-001-S1",
+          "order": 1,
+          "name": "TPD Special Tray (Distal Extension cases)",
+          "component": "Special Tray",
+          "brand": "Generic",
+          "teeth": "Upper Arch/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["TPD-001-S2"]
+        },
+        {
+          "id": "TPD-001-S2",
+          "order": 2,
+          "name": "TPD Denture Base",
+          "component": "Denture Base",
+          "brand": "Generic",
+          "teeth": "Upper Arch/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["TPD-001-S3"]
+        },
+        {
+          "id": "TPD-001-S3",
+          "order": 3,
+          "name": "TPD Occlusal Rims",
+          "component": "Occlusal Rims",
+          "brand": "Generic",
+          "teeth": "Upper Arch/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["TPD-001-S4"]
+        },
+        {
+          "id": "TPD-001-S4",
+          "order": 4,
+          "name": "Articulation",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Both arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["TPD-001-S5"]
+        },
+        {
+          "id": "TPD-001-S5",
+          "order": 5,
+          "name": "TPD Teeth Setting",
+          "component": "Teeth Set",
+          "brand": "Acryrock",
+          "teeth": "Missing Teeth no",
+          "cost": "10 per teeth",
+          "is_final": false,
+          "next_steps": ["TPD-001-S6"]
+        },
+        {
+          "id": "TPD-001-S6",
+          "order": 6,
+          "name": "TPD Processing",
+          "component": "Acrylic Denture Base",
+          "brand": "Generic",
+          "teeth": "Upper Arch/Lower arch",
+          "cost": "60 per arch",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "ONL-001",
+      "category": "ONLAY",
+      "work_type": "METAL ONLAY",
+      "steps": [
+        {
+          "id": "ONL-001-S1",
+          "order": 1,
+          "name": "Secondary Cast",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Both Arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["ONL-001-S2"]
+        },
+        {
+          "id": "ONL-001-S2",
+          "order": 2,
+          "name": "FVC Wax Pattern",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Tooth no",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["ONL-001-S3"]
+        },
+        {
+          "id": "ONL-001-S3",
+          "order": 3,
+          "name": "Onlay Fabrication",
+          "component": "Metal Onlay",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "800",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "ONL-002",
+      "category": "ONLAY",
+      "work_type": "CERAMIC ONLAY",
+      "steps": [
+        {
+          "id": "ONL-002-S1",
+          "order": 1,
+          "name": "Secondary Cast",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Both Arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["ONL-002-S2"]
+        },
+        {
+          "id": "ONL-002-S2",
+          "order": 2,
+          "name": "Onlay Fabrication",
+          "component": "Ceramic Onlay",
+          "brand": "Chinese Zirconia",
+          "teeth": "Teeth no",
+          "cost": "1000",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "INL-001",
+      "category": "INLAY",
+      "work_type": "METAL INLAY",
+      "steps": [
+        {
+          "id": "INL-001-S1",
+          "order": 1,
+          "name": "Secondary Cast",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Both Arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["INL-001-S2"]
+        },
+        {
+          "id": "INL-001-S2",
+          "order": 2,
+          "name": "FVC Wax Pattern",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["INL-001-S3"]
+        },
+        {
+          "id": "INL-001-S3",
+          "order": 3,
+          "name": "Inlay Fabrication",
+          "component": "Metal Inlay",
+          "brand": "Generic All Metal Lab Fabrication",
+          "teeth": "Teeth no",
+          "cost": "500",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "INL-002",
+      "category": "INLAY",
+      "work_type": "CERAMIC INLAY",
+      "steps": [
+        {
+          "id": "INL-002-S1",
+          "order": 1,
+          "name": "Secondary Cast",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Both Arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["INL-002-S2"]
+        },
+        {
+          "id": "INL-002-S2",
+          "order": 2,
+          "name": "Inlay Fabrication",
+          "component": "Ceramic Inlay",
+          "brand": "Chinese Zirconia",
+          "teeth": "Teeth no",
+          "cost": "1000",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "CP-001",
+      "category": "CAST POST",
+      "work_type": "CAST POST",
+      "steps": [
+        {
+          "id": "CP-001-S1",
+          "order": 1,
+          "name": "Post and Core Fabrication",
+          "component": "Metal Post and Core",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "500",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FVC-UG-001",
+      "category": "FVC (UG / PG FORMAT)",
+      "work_type": "FULL METAL CROWN",
+      "steps": [
+        {
+          "id": "FVC-UG-001-S1",
+          "order": 1,
+          "name": "Secondary Cast",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FVC-UG-001-S2"]
+        },
+        {
+          "id": "FVC-UG-001-S2",
+          "order": 2,
+          "name": "FVC Wax Pattern",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FVC-UG-001-S3"]
+        },
+        {
+          "id": "FVC-UG-001-S3",
+          "order": 3,
+          "name": "Crown Fabrication",
+          "component": "All Metal Crown",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "400",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    },
+
+    {
+      "id": "FVC-UG-002",
+      "category": "FVC (UG / PG FORMAT)",
+      "work_type": "METAL CERAMIC",
+      "steps": [
+        {
+          "id": "FVC-UG-002-S1",
+          "order": 1,
+          "name": "Secondary Cast",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Upper/Lower arch",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FVC-UG-002-S2"]
+        },
+        {
+          "id": "FVC-UG-002-S2",
+          "order": 2,
+          "name": "FVC Wax Pattern",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": false,
+          "next_steps": ["FVC-UG-002-S3"]
+        },
+        {
+          "id": "FVC-UG-002-S3",
+          "order": 3,
+          "name": "Metal Coping",
+          "component": "Metal Ceramic Crown",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "1300 per unit",
+          "is_final": false,
+          "next_steps": ["FVC-UG-002-S4"]
+        },
+        {
+          "id": "FVC-UG-002-S4",
+          "order": 4,
+          "name": "Bisque Trial",
+          "component": "No Component Required",
+          "brand": "Generic",
+          "teeth": "Teeth no",
+          "cost": "0",
+          "is_final": true,
+          "next_steps": []
+        }
+      ]
+    }
+
+  ]
+}
