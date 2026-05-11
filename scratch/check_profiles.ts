@@ -13,5 +13,4 @@ async function checkProfiles() {
     console.log("Profiles sample:", data);
   }
 }
-
 checkProfiles();

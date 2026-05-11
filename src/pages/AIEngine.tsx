@@ -94,6 +94,14 @@ const AIEngine = () => {
   const [fileAnalysis, setFileAnalysis] = useState<string | null>(null);
   const [fetchingFile, setFetchingFile] = useState(false);
 
+  const [selectedProcedure, setSelectedProcedure] = useState<any>(null);
+  const [selectedStep, setSelectedStep] = useState<any>(null);
+  const [showProcPicker, setShowProcPicker] = useState(false);
+  const [showStepPicker, setShowStepPicker] = useState(false);
+
+  // Load the dataset directly for the pickers
+  const diasDataset = require("@/data/dias_lab_workflow.json");
+
   useEffect(() => {
     const fetchCases = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -183,18 +191,20 @@ const AIEngine = () => {
   };
 
   const handleSuggest = async () => {
-    if (!input.trim() && !symptoms.trim()) return;
+    if (!input.trim() && !symptoms.trim() && !selectedProcedure) return;
 
     setLoading(true);
 
     try {
       let relevantLabContext = "";
       
-      if (stage.trim()) {
+      if (selectedProcedure) {
+        relevantLabContext = `\n\n[CRITICAL LAB WORKFLOW DATA]\nYou MUST use the following lab workflow for your response:\nCategory: ${selectedProcedure.category}\nWork Type: ${selectedProcedure.work_type}\nLab Steps:\n${selectedProcedure.steps.map((s: any) => `- Step ${s.order}: ${s.name} (Component: ${s.component}, Cost: ${s.cost})`).join('\n')}\n`;
+        if (selectedStep) {
+          relevantLabContext += `\nThe doctor is currently on Step ${selectedStep.order} (${selectedStep.name}). Focus your guidance on completing this step and preparing for the next.`;
+        }
+      } else if (stage.trim()) {
         const stageQuery = stage.toLowerCase().trim();
-        // @ts-ignore
-        const diasDataset = require("@/data/dias_lab_workflow.json");
-        
         const matchedProcedure = diasDataset.procedures.find((p: any) => 
           p.category.toLowerCase().includes(stageQuery) || 
           p.work_type.toLowerCase().includes(stageQuery) ||
@@ -206,7 +216,10 @@ const AIEngine = () => {
         }
       }
 
-      const combinedInput = `Patient Symptoms: ${symptoms}\nProcedure Stage: ${stage}\nDoctor Observations: ${input}`;
+      const procedureInfo = selectedProcedure ? `${selectedProcedure.category} - ${selectedProcedure.work_type}` : stage;
+      const stepInfo = selectedStep ? `Step ${selectedStep.order}: ${selectedStep.name}` : "";
+      
+      const combinedInput = `Patient Symptoms: ${symptoms}\nProcedure Stage: ${procedureInfo} ${stepInfo}\nDoctor Observations: ${input}`;
 
       const prompt = `You are an expert dental AI assistant. Based on the following clinical input, provide a diagnostic assessment and procedural guidance.
 Input: ${combinedInput}${relevantLabContext}
@@ -253,7 +266,7 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
       setOutput({
         diagnosis: "API Error: Could not generate insights",
         confidence: "Low",
-        steps: ["Check your network connection", "Ensure the Gemini API key is valid", "Try rewording your prompt", error.message || "Unknown error occurred"],
+        steps: ["Check your network connection", "Ensure the API key is valid", "Try rewording your prompt", error.message || "Unknown error occurred"],
         instruments: ["N/A"],
         materials: ["N/A"],
         alerts: ["The AI generation failed. Please try again."]
@@ -314,6 +327,72 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
           </View>
         </Modal>
 
+        {/* Procedure Picker Modal */}
+        <Modal visible={showProcPicker} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Operation / Surgery</Text>
+                <TouchableOpacity onPress={() => setShowProcPicker(false)}>
+                  <X size={20} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView>
+                {diasDataset.procedures.map((p: any) => (
+                  <TouchableOpacity
+                    key={p.id}
+                    style={styles.casePickerItem}
+                    onPress={() => {
+                      setSelectedProcedure(p);
+                      setSelectedStep(null); // Reset step when procedure changes
+                      setShowProcPicker(false);
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.casePickerName}>{p.category} - {p.work_type}</Text>
+                      <Text style={styles.casePickerMeta}>{p.steps.length} steps in workflow</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Step Picker Modal */}
+        <Modal visible={showStepPicker} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Current Step</Text>
+                <TouchableOpacity onPress={() => setShowStepPicker(false)}>
+                  <X size={20} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView>
+                {selectedProcedure?.steps.map((s: any) => (
+                  <TouchableOpacity
+                    key={s.id}
+                    style={styles.casePickerItem}
+                    onPress={() => {
+                      setSelectedStep(s);
+                      setShowStepPicker(false);
+                    }}
+                  >
+                    <View style={styles.casePickerAvatar}>
+                      <Text style={styles.casePickerAvatarText}>{s.order}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.casePickerName}>Step {s.order}: {s.name}</Text>
+                      <Text style={styles.casePickerMeta}>{s.component}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
         {/* File Analysis Card */}
         {(fetchingFile || fileAnalysis) && (
           <View style={styles.fileAnalysisCard}>
@@ -333,30 +412,38 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
         )}
 
         <View style={styles.entrySection}>
+          <View style={styles.inputCard}>
+            <Text style={styles.inputLabel}>Clinical Symptoms</Text>
+            <TextInput
+              placeholder="e.g. Sharp pain, sensitivity..."
+              style={styles.smallInput}
+              value={symptoms}
+              onChangeText={setSymptoms}
+              placeholderTextColor="#94A3B8"
+            />
+          </View>
           <View style={styles.grid}>
             <View style={styles.gridItem}>
-              <View style={styles.inputCard}>
-                <Text style={styles.inputLabel}>Clinical Symptoms</Text>
-                <TextInput
-                  placeholder="e.g. Sharp pain, sensitivity..."
-                  style={styles.smallInput}
-                  value={symptoms}
-                  onChangeText={setSymptoms}
-                  placeholderTextColor="#94A3B8"
-                />
-              </View>
+              <TouchableOpacity style={styles.inputCard} onPress={() => setShowProcPicker(true)}>
+                <Text style={styles.inputLabel}>Operation / Topic</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', height: 36 }}>
+                  <Text style={{ fontSize: 12, color: selectedProcedure ? '#0F172A' : '#94A3B8' }} numberOfLines={1}>
+                    {selectedProcedure ? `${selectedProcedure.category} - ${selectedProcedure.work_type}` : "Select Procedure..."}
+                  </Text>
+                  <ChevronDown size={14} color="#94A3B8" />
+                </View>
+              </TouchableOpacity>
             </View>
             <View style={styles.gridItem}>
-              <View style={styles.inputCard}>
-                <Text style={styles.inputLabel}>Current Procedure</Text>
-                <TextInput
-                  placeholder="e.g. RCT Stage 2, Prep..."
-                  style={styles.smallInput}
-                  value={stage}
-                  onChangeText={setStage}
-                  placeholderTextColor="#94A3B8"
-                />
-              </View>
+              <TouchableOpacity style={styles.inputCard} onPress={() => selectedProcedure && setShowStepPicker(true)}>
+                <Text style={styles.inputLabel}>Current Step</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', height: 36 }}>
+                  <Text style={{ fontSize: 12, color: selectedStep ? '#0F172A' : (selectedProcedure ? '#94A3B8' : '#CBD5E1') }} numberOfLines={1}>
+                    {selectedStep ? `Step ${selectedStep.order}: ${selectedStep.name}` : "Select Step..."}
+                  </Text>
+                  <ChevronDown size={14} color={selectedProcedure ? "#94A3B8" : "#CBD5E1"} />
+                </View>
+              </TouchableOpacity>
             </View>
           </View>
 
