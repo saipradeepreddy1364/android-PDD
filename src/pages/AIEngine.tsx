@@ -20,6 +20,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 import { useVoiceInput } from "@/hooks/useVoice";
+import { WorkflowRecommender, RecommendedStep } from "@/lib/WorkflowRecommender";
 
 type Output = {
   diagnosis: string;
@@ -98,6 +99,8 @@ const AIEngine = () => {
   const [selectedStep, setSelectedStep] = useState<any>(null);
   const [showProcPicker, setShowProcPicker] = useState(false);
   const [showStepPicker, setShowStepPicker] = useState(false);
+  const [recommendations, setRecommendations] = useState<RecommendedStep[]>([]);
+  const [recLoading, setRecLoading] = useState(false);
 
   // Load the dataset directly for the pickers
   const diasDataset = require("@/data/dias_lab_workflow.json");
@@ -115,6 +118,25 @@ const AIEngine = () => {
     };
     fetchCases();
   }, []);
+
+  // Update recommendations when selection changes
+  useEffect(() => {
+    const updateRecs = async () => {
+      if (selectedProcedure && selectedStep) {
+        setRecLoading(true);
+        const recs = await WorkflowRecommender.recommendNextSteps(
+          selectedProcedure.id,
+          selectedStep.id,
+          { diagnosis: symptoms || selectedCase?.diagnosis || "" }
+        );
+        setRecommendations(recs);
+        setRecLoading(false);
+      } else {
+        setRecommendations([]);
+      }
+    };
+    updateRecs();
+  }, [selectedProcedure, selectedStep, symptoms, selectedCase]);
 
   const handleSelectCase = async (patientCase: any) => {
     setSelectedCase(patientCase);
@@ -202,6 +224,10 @@ const AIEngine = () => {
         relevantLabContext = `\n\n[CRITICAL LAB WORKFLOW DATA]\nYou MUST use the following lab workflow for your response:\nCategory: ${selectedProcedure.category}\nWork Type: ${selectedProcedure.work_type}\nLab Steps:\n${selectedProcedure.steps.map((s: any) => `- Step ${s.order}: ${s.name} (Component: ${s.component}, Cost: ${s.cost})`).join('\n')}\n`;
         if (selectedStep) {
           relevantLabContext += `\nThe doctor is currently on Step ${selectedStep.order} (${selectedStep.name}). Focus your guidance on completing this step and preparing for the next.`;
+          
+          if (recommendations.length > 0) {
+            relevantLabContext += `\n\n[RECOMMENDED NEXT STEPS BY ALGORITHM]\nThe system recommends these steps next:\n${recommendations.map(r => `- ${r.name} (Confidence: ${Math.round(r.score * 100)}%, Reason: ${r.reasons.join(', ')})`).join('\n')}\nPlease align your advice with these recommendations where clinically appropriate.`;
+          }
         }
       } else if (stage.trim()) {
         const stageQuery = stage.toLowerCase().trim();
@@ -503,6 +529,29 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
 
         {output && !loading && (
           <View style={styles.outputSection}>
+            {/* Recommended Path Card (Algorithm Result) */}
+            {recommendations.length > 0 && (
+              <View style={styles.recommendationCard}>
+                <View style={styles.cardTitleRow}>
+                  <Sparkles size={16} color="#8B5CF6" />
+                  <Text style={[styles.cardTitle, { color: '#8B5CF6' }]}>AI Recommended Path</Text>
+                </View>
+                <View style={styles.recsList}>
+                  {recommendations.map((rec, i) => (
+                    <View key={rec.id} style={styles.recItem}>
+                      <View style={[styles.recBadge, i === 0 && styles.recBadgePrimary]}>
+                        <Text style={styles.recBadgeText}>{Math.round(rec.score * 100)}% Match</Text>
+                      </View>
+                      <View style={styles.recContent}>
+                        <Text style={styles.recName}>{rec.name}</Text>
+                        <Text style={styles.recMeta}>{rec.reasons[0] || "Standard workflow progression"}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
             {/* Diagnosis card */}
             <View style={styles.diagnosisCard}>
               <View style={styles.diagnosisHeader}>
@@ -933,6 +982,51 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#475569",
     lineHeight: 20,
+  },
+  recommendationCard: {
+    backgroundColor: "#F5F3FF",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(139, 92, 246, 0.2)",
+    marginBottom: 8,
+  },
+  recsList: {
+    gap: 12,
+  },
+  recItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  recBadge: {
+    backgroundColor: "#E2E8F0",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    minWidth: 70,
+    alignItems: "center",
+  },
+  recBadgePrimary: {
+    backgroundColor: "#8B5CF6",
+  },
+  recBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  recContent: {
+    flex: 1,
+  },
+  recName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1E1B4B",
+  },
+  recMeta: {
+    fontSize: 11,
+    color: "#6D6E9C",
+    marginTop: 2,
   },
 });
 
