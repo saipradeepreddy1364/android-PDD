@@ -113,7 +113,7 @@ const SplashScreen = () => {
     <View style={styles.container}>
       <View style={styles.logoWrapper}>
         <Image 
-          source={{ uri: "/pwa-512x512.png" }} 
+          source={{ uri: Platform.OS === 'web' ? "/pwa-512x512.png" : "https://clinlab-ai-assist.vercel.app/pwa-512x512.png" }} 
           style={styles.logo}
           resizeMode="contain"
         />
