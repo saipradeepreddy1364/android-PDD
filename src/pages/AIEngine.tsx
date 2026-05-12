@@ -21,6 +21,7 @@ import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 import { useVoiceInput } from "@/hooks/useVoice";
 import { WorkflowRecommender, RecommendedStep } from "@/lib/WorkflowRecommender";
+import diasDataset from "@/data/dias_lab_workflow.json";
 
 type Output = {
   diagnosis: string;
@@ -103,7 +104,7 @@ const AIEngine = () => {
   const [recLoading, setRecLoading] = useState(false);
 
   // Load the dataset directly for the pickers
-  const diasDataset = require("@/data/dias_lab_workflow.json");
+  // diasDataset is now imported at the top
 
   useEffect(() => {
     const fetchCases = async () => {

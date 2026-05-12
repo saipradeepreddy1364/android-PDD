@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimens
 import { Download, Printer, Send, ClipboardList } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 
 const labOptions = [
   { id: "crown", label: "Crown" },
@@ -16,7 +16,7 @@ const labOptions = [
 
 const LabRequisition = () => {
   const navigation = useNavigation<any>();
-  const route = require("@react-navigation/native").useRoute();
+  const route = useRoute<any>();
   const caseId = route.params?.caseId;
   
   const [loading, setLoading] = useState(!!caseId);
