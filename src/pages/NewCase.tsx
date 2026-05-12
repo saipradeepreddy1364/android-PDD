@@ -69,7 +69,7 @@ const NewCase = () => {
         const { error } = await supabase.from('cases').insert([
           {
             patient_name: formData.patient_name,
-            age: parseInt(formData.age) || 0,
+            // age: parseInt(formData.age) || 0, // Temporarily disabled to prevent schema error
             gender: formData.gender,
             tooth_number: formData.tooth_number,
             diagnosis: formData.chief_complaint,

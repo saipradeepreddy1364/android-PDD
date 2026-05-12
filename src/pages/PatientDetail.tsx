@@ -248,6 +248,44 @@ const PatientDetail = () => {
     </View>
   );
 
+  const renderInfo = () => (
+    <View style={styles.card}>
+      <View style={styles.cardHeaderRow}>
+        <ClipboardList size={16} color="#0EA5E9" />
+        <Text style={styles.cardHeaderTitle}>Patient information</Text>
+      </View>
+      <View style={styles.infoGrid}>
+        <View style={styles.infoItem}>
+          <Text style={styles.infoLabel}>Gender</Text>
+          <Text style={styles.infoValue}>{patient.gender || "Not specified"}</Text>
+        </View>
+        <View style={styles.infoItem}>
+          <Text style={styles.infoLabel}>Tooth</Text>
+          <Text style={styles.infoValue}>#{patient.tooth_number}</Text>
+        </View>
+      </View>
+      
+      <View style={styles.infoSection}>
+        <Text style={styles.infoLabel}>Chief Complaint</Text>
+        <Text style={styles.infoValueText}>{patient.diagnosis || "No complaint recorded"}</Text>
+      </View>
+
+      <View style={styles.infoSection}>
+        <Text style={styles.infoLabel}>Reported Symptoms</Text>
+        <View style={styles.symptomRow}>
+          {patient.is_urgent && (
+            <View style={[styles.symptomBadge, { backgroundColor: '#FEE2E2' }]}>
+              <Text style={[styles.symptomBadgeText, { color: '#EF4444' }]}>Urgent Case</Text>
+            </View>
+          )}
+          <View style={styles.symptomBadge}>
+            <Text style={styles.symptomBadgeText}>Standard Review</Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+
   const renderAI = () => (
     <View style={styles.card}>
       <View style={styles.cardHeaderRow}>
@@ -347,7 +385,7 @@ const PatientDetail = () => {
         </View>
 
         <View style={styles.tabBar}>
-          {["timeline", "actions", "notes", "ai", "files"].map((tab) => (
+          {["timeline", "info", "actions", "notes", "ai", "files"].map((tab) => (
             <TouchableOpacity 
               key={tab}
               onPress={() => setActiveTab(tab)}
@@ -362,6 +400,7 @@ const PatientDetail = () => {
 
         <View style={styles.content}>
           {activeTab === "timeline" && renderTimeline()}
+          {activeTab === "info" && renderInfo()}
           {activeTab === "actions" && (
             <View style={styles.card}>
               <Text style={styles.cardHeaderTitle}>Action Center</Text>
@@ -735,6 +774,51 @@ const styles = StyleSheet.create({
   },
   actionBtnLabelActive: {
     color: "#FFFFFF",
+  },
+  infoGrid: {
+    flexDirection: "row",
+    gap: 20,
+    marginBottom: 16,
+  },
+  infoItem: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#94A3B8",
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  infoValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F172A",
+    textTransform: "capitalize",
+  },
+  infoSection: {
+    marginTop: 12,
+  },
+  infoValueText: {
+    fontSize: 14,
+    color: "#475569",
+    lineHeight: 20,
+  },
+  symptomRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 6,
+  },
+  symptomBadge: {
+    backgroundColor: "#F1F5F9",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  symptomBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#475569",
   },
 });
 
