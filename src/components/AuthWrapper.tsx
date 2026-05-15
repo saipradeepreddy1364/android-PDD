@@ -16,7 +16,10 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (session?.user && !session.user.email_confirmed_at) {
+      const isRecovery = Platform.OS === 'web' && typeof window !== 'undefined' && 
+        (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery'));
+
+      if (session?.user && !session.user.email_confirmed_at && !isRecovery) {
         await supabase.auth.signOut();
         setSession(null);
         setProfile(null);
