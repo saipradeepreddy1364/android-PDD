@@ -2,18 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Platform } from 'react-native';
 
 // Native voice is imported dynamically or guarded to prevent web/Expo Go crashes
-let Voice: any;
-if (Platform.OS !== 'web') {
-  try {
-    // In Expo Go, this package will exist in node_modules but its native code won't be available
-    // We try to require it and then check if it's actually functional
-    const VoiceModule = require('@react-native-voice/voice');
-    Voice = VoiceModule.default || VoiceModule;
-  } catch (e) {
-    console.log('Native Voice module not available - this is expected in Expo Go');
-    Voice = null;
-  }
-}
+// Native voice is imported dynamically on mobile
+let Voice: any = null;
+// In Vite/Web, we avoid using require() entirely as it is not defined
 
 export const useVoiceInput = (onResult?: (text: string) => void) => {
   const [isListening, setIsListening] = useState(false);

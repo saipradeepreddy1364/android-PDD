@@ -86,11 +86,13 @@ const SplashScreen = () => {
         new Promise(resolve => setTimeout(resolve, data?.profile ? 0 : 4000)),
       ]);
 
-      // Prevent redirecting if we are on a deep link like reset-password
-      const isResetPasswordRoute = Platform.OS === 'web' && typeof window !== 'undefined' && window.location.pathname.includes('reset-password');
+      // Prevent redirecting to login if we are on a deep link like reset-password
+      const isResetPasswordRoute = Platform.OS === 'web' && typeof window !== 'undefined' && 
+        (window.location.pathname.includes('reset-password') || window.location.href.includes('type=recovery'));
       
       if (isResetPasswordRoute) {
-        // Do nothing, let React Navigation handle the deep link to ResetPassword
+        // Explicitly navigate to ResetPassword to ensure the user isn't stuck or sent to Login
+        navigation.replace("ResetPassword");
         return;
       }
 
