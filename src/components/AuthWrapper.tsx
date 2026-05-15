@@ -14,11 +14,12 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const checkAuth = async () => {
+      // Capture the URL synchronously BEFORE Supabase has a chance to strip the hash
+      const isRecovery = Platform.OS === 'web' && typeof window !== 'undefined' && 
+        (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery') || window.location.pathname.includes('reset-password'));
+
       const { data: { session } } = await supabase.auth.getSession();
       
-      const isRecovery = Platform.OS === 'web' && typeof window !== 'undefined' && 
-        (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery'));
-
       if (session?.user && !session.user.email_confirmed_at && !isRecovery) {
         await supabase.auth.signOut();
         setSession(null);
