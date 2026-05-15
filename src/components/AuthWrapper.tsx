@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Image } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Image, Platform } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { Clock, AlertCircle, LogOut, CheckCircle } from "lucide-react-native";
 
