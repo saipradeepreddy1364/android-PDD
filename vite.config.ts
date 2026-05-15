@@ -98,7 +98,23 @@ export default defineConfig(({ mode }) => ({
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },
   optimizeDeps: {
-    include: ["lucide-react-native", "react-native-web", "react-native-safe-area-context", "react-native-screens", "@react-navigation/native", "@react-navigation/stack"],
+    include: [
+      "lucide-react-native", 
+      "react-native-web", 
+      "react-native-safe-area-context", 
+      "react-native-screens", 
+      "@react-navigation/native", 
+      "@react-navigation/stack",
+      "expo",
+      "expo-device",
+      "expo-notifications",
+      "expo-modules-core"
+    ],
+    esbuildOptions: {
+      loader: {
+        '.js': 'jsx',
+      },
+    },
   },
   build: {
     outDir: "dist",
