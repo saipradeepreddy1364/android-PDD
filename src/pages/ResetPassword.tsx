@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, SafeAreaView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { ShieldCheck, Lock, ArrowLeft, CheckCircle2 } from "lucide-react-native";
+import { ShieldCheck, Lock, ArrowLeft, CheckCircle2, Eye, EyeOff } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 
 const showAlert = (title: string, message: string, actions?: any[]) => {
@@ -23,6 +23,10 @@ const ResetPassword = () => {
   const [success, setSuccess] = useState(false);
   const [isValidSession, setIsValidSession] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const passwordsMatch = password.length > 0 && password === confirmPassword;
+  const isPasswordValid = password.length >= 6;
 
   useEffect(() => {
     const checkSession = async () => {
@@ -49,11 +53,11 @@ const ResetPassword = () => {
   }, [navigation]);
 
   const handleResetPassword = async () => {
-    if (password.length < 6) {
+    if (!isPasswordValid) {
       showAlert("Weak Password", "Password must be at least 6 characters.");
       return;
     }
-    if (password !== confirmPassword) {
+    if (!passwordsMatch) {
       showAlert("Mismatch", "Passwords do not match.");
       return;
     }
@@ -110,27 +114,47 @@ const ResetPassword = () => {
             <View style={styles.form}>
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>New Password</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="••••••••"
-                  secureTextEntry
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholderTextColor="#94A3B8"
-                />
+                <View style={styles.passwordInputContainer}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder="••••••••"
+                    secureTextEntry={!showPassword}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholderTextColor="#94A3B8"
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                    {showPassword ? <EyeOff size={20} color="#94A3B8" /> : <Eye size={20} color="#94A3B8" />}
+                  </TouchableOpacity>
+                </View>
               </View>
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Confirm New Password</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="••••••••"
-                  secureTextEntry
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholderTextColor="#94A3B8"
-                />
+                <View style={[styles.passwordInputContainer, confirmPassword.length > 0 && !passwordsMatch && styles.inputError]}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder="••••••••"
+                    secureTextEntry={!showPassword}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholderTextColor="#94A3B8"
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                    {showPassword ? <EyeOff size={20} color="#94A3B8" /> : <Eye size={20} color="#94A3B8" />}
+                  </TouchableOpacity>
+                </View>
+                {confirmPassword.length > 0 && !passwordsMatch && (
+                  <Text style={styles.errorText}>Passwords do not match</Text>
+                )}
+                {password.length > 0 && !isPasswordValid && (
+                  <Text style={styles.errorText}>Password must be at least 6 characters</Text>
+                )}
               </View>
-              <TouchableOpacity style={styles.primaryButton} onPress={handleResetPassword} disabled={loading}>
+              <TouchableOpacity 
+                style={[styles.primaryButton, (!passwordsMatch || !isPasswordValid) && styles.disabledButton]} 
+                onPress={handleResetPassword} 
+                disabled={loading || !passwordsMatch || !isPasswordValid}
+              >
                 {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Update Password</Text>}
               </TouchableOpacity>
             </View>
@@ -166,8 +190,13 @@ const styles = StyleSheet.create({
   form: { gap: 20 },
   inputGroup: { gap: 8 },
   label: { fontSize: 14, fontWeight: "600", color: "#0F172A" },
-  input: { height: 52, borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 12, paddingHorizontal: 16, fontSize: 15, color: "#0F172A", backgroundColor: "#F8FAFC" },
+  passwordInputContainer: { flexDirection: 'row', alignItems: 'center', height: 52, borderWidth: 1, borderColor: "#E2E8F0", borderRadius: 12, backgroundColor: "#F8FAFC" },
+  passwordInput: { flex: 1, height: '100%', paddingHorizontal: 16, fontSize: 15, color: "#0F172A" },
+  eyeIcon: { padding: 14 },
+  inputError: { borderColor: "#EF4444" },
+  errorText: { color: "#EF4444", fontSize: 12, marginTop: -4 },
   primaryButton: { height: 52, backgroundColor: "#0EA5E9", borderRadius: 14, alignItems: "center", justifyContent: "center", marginTop: 12 },
+  disabledButton: { backgroundColor: "#94A3B8", opacity: 0.7 },
   buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
   securityNote: { flexDirection: "row", alignItems: "center", justifyContent: 'center', gap: 8, marginTop: 48 },
   securityText: { fontSize: 12, color: "#166534", fontWeight: "500" }
