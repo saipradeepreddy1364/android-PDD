@@ -204,12 +204,20 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         {!isDesktop && (
           <View style={[styles.header, isDark && styles.headerDark, { paddingTop: insets.top }]}>
             <Text style={styles.brandText}>ClinLab</Text>
-            <TouchableOpacity onPress={() => setIsNotificationsOpen(true)}>
-              <Bell size={20} color={isDark ? "#FFF" : "#000"} />
-              {role === "organization" && pendingApprovalsCount > 0 && (
-                <View style={styles.orangeDotMobileHeader} />
-              )}
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <TouchableOpacity onPress={toggle}>
+                {isDark ? <Sun size={20} color="#FFF" /> : <Moon size={20} color="#000" />}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setIsNotificationsOpen(true)}>
+                <Bell size={20} color={isDark ? "#FFF" : "#000"} />
+                {role === "organization" && pendingApprovalsCount > 0 && (
+                  <View style={styles.orangeDotMobileHeader} />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleLogout}>
+                <LogOut size={20} color={isDark ? "#FFF" : "#000"} />
+              </TouchableOpacity>
+            </View>
           </View>
         )}
         <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
