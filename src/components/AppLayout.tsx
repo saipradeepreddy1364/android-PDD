@@ -98,7 +98,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(subscription);
     };
   }, [role]);
 
