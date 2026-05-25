@@ -1,5 +1,5 @@
 import * as React from "react";
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ViewStyle, TextStyle } from "react-native";
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ViewStyle, TextStyle, StyleProp } from "react-native";
 import { X } from "lucide-react-native";
 
 const Sheet = ({ children, open, onOpenChange }: { children: React.ReactNode, open?: boolean, onOpenChange?: (open: boolean) => void }) => {
@@ -10,7 +10,7 @@ const SheetTrigger = ({ children, onPress }: { children: React.ReactNode, onPres
   return <TouchableOpacity onPress={onPress}>{children}</TouchableOpacity>;
 };
 
-const SheetContent = ({ children, side = "right", open, onOpenChange, style }: { children: React.ReactNode, side?: "top" | "bottom" | "left" | "right", open?: boolean, onOpenChange?: (open: boolean) => void, style?: ViewStyle }) => {
+const SheetContent = ({ children, side = "right", open, onOpenChange, style }: { children: React.ReactNode, side?: "top" | "bottom" | "left" | "right", open?: boolean, onOpenChange?: (open: boolean) => void, style?: StyleProp<ViewStyle> }) => {
   return (
     <Modal
       transparent
@@ -31,19 +31,19 @@ const SheetContent = ({ children, side = "right", open, onOpenChange, style }: {
   );
 };
 
-const SheetHeader = ({ children, style }: { children: React.ReactNode, style?: ViewStyle }) => (
+const SheetHeader = ({ children, style }: { children: React.ReactNode, style?: StyleProp<ViewStyle> }) => (
   <View style={[styles.header, style]}>{children}</View>
 );
 
-const SheetFooter = ({ children, style }: { children: React.ReactNode, style?: ViewStyle }) => (
+const SheetFooter = ({ children, style }: { children: React.ReactNode, style?: StyleProp<ViewStyle> }) => (
   <View style={[styles.footer, style]}>{children}</View>
 );
 
-const SheetTitle = ({ children, style }: { children: React.ReactNode, style?: TextStyle }) => (
+const SheetTitle = ({ children, style }: { children: React.ReactNode, style?: StyleProp<TextStyle> }) => (
   <Text style={[styles.title, style]}>{children}</Text>
 );
 
-const SheetDescription = ({ children, style }: { children: React.ReactNode, style?: TextStyle }) => (
+const SheetDescription = ({ children, style }: { children: React.ReactNode, style?: StyleProp<TextStyle> }) => (
   <Text style={[styles.description, style]}>{children}</Text>
 );
 

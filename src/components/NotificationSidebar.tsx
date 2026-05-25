@@ -103,9 +103,12 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
   };
 
   const handleNotificationPress = (n: Notification) => {
-    onOpenChange(false); // Close sidebar
+    onOpenChange(false); // Close sidebar first
     if (n.id.startsWith("pending-")) {
-      navigation.navigate("ApprovalCenter");
+      // Delay navigation to allow the modal close animation to complete
+      setTimeout(() => {
+        navigation.navigate("ApprovalCenter");
+      }, 350);
     }
   };
 
