@@ -8,25 +8,19 @@ import {
   Sparkles,
   ClipboardList,
   Users,
-  Upload,
   Moon,
   Sun,
   Stethoscope,
   Bell,
-  ChevronLeft,
   LogOut,
   LayoutGrid,
   FileSearch,
   BarChart3,
-} from "lucide-react-native"; // Using native version
-import AsyncStorage from "@react-native-async-storage/async-storage";
+} from "lucide-react-native";
 import { useTheme } from "./ThemeProvider";
-import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { useNotifications } from "@/hooks/useNotifications";
 import { NotificationSidebar } from "./NotificationSidebar";
-
-const { width } = Dimensions.get("window");
 
 type Tab = {
   name: string;
@@ -50,226 +44,139 @@ const orgTabs: Tab[] = [
   { name: "OrgReports", label: "Reports", icon: FileSearch },
 ];
 
-const titleMap: Record<string, string> = {
-  "Dashboard": "Clinical Assistant",
-  "OrgDashboard": "Organization Hub",
-  "NewCase": "New Case",
-  "AIEngine": "AI Clinical Guide",
-  "LabRequisition": "Lab Requisition",
-  "Patients": "Patient Records",
-  "OrgCases": "Organization Cases",
-  "OrgReports": "Patient Reports",
-  "OrgDoctors": "Clinical Staff",
-  "Insights": "Clinical Insights",
-};
-
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { theme, toggle } = useTheme();
   const navigation = useNavigation<any>();
   const route = useRoute();
-  const [hasNewNotifications, setHasNewNotifications] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [role, setRole] = useState<string | null>(null);
+  const [windowWidth, setWindowWidth] = useState(Dimensions.get("window").width);
   const insets = useSafeAreaInsets();
   
   useNotifications();
 
   useEffect(() => {
+    const onChange = ({ window }: { window: any }) => setWindowWidth(window.width);
+    const subscription = Dimensions.addEventListener("change", onChange);
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
     let authListener: any;
-
     const checkUser = async () => {
-      // Remove Guest Mode logic
-
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        console.log("AppLayout: No session found");
         navigation.navigate("Login");
         return;
       }
-
-      // 1. Try metadata first (faster)
-      const metaRole = session.user.user_metadata?.role;
-      if (metaRole) {
-        console.log("AppLayout: Detected role from metadata:", metaRole);
-        setRole(metaRole);
-      }
-
-      // 2. Always fetch profile to be sure and get latest status
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', session.user.id)
-        .single();
-      
-      if (profile) {
-        console.log("AppLayout: Detected role from profile table:", profile.role);
-        setRole(profile.role);
-        
-        // If organization, check for pending doctors immediately
-        if (profile.role === 'organization') {
-          const { count } = await supabase
-            .from('profiles')
-            .select('*', { count: 'exact', head: true })
-            .eq('org_id', session.user.id)
-            .eq('role', 'doctor')
-            .eq('status', 'pending');
-          
-          setHasNewNotifications(count ? count > 0 : false);
-        }
-      } else if (error) {
-        console.error("AppLayout: Error fetching profile:", error);
-      }
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+      if (profile) setRole(profile.role);
     };
 
     checkUser();
-
-    let pollInterval: ReturnType<typeof setInterval>;
-
-    // Use polling for pending approvals since Supabase Replication may not be enabled
-    const setupPolling = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const checkPending = async () => {
-        const { count } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true })
-          .eq('org_id', session.user.id)
-          .eq('role', 'doctor')
-          .eq('status', 'pending');
-        
-        setHasNewNotifications(count ? count > 0 : false);
-      };
-
-      // Poll every 1 second
-      pollInterval = setInterval(checkPending, 1000);
-    };
-
-    setupPolling();
-
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("AppLayout: Auth state change:", event);
-      if (session) {
-        checkUser();
-      } else {
-        setRole(null);
-        setHasNewNotifications(false);
-      }
+      if (session) checkUser(); else setRole(null);
     });
     authListener = data;
-
-    return () => {
-      if (authListener?.subscription) authListener.subscription.unsubscribe();
-      if (pollInterval) clearInterval(pollInterval);
-    };
+    return () => authListener?.subscription.unsubscribe();
   }, [navigation]);
 
   const activeTabs = (!role || role === "loading") ? [] : (role === "organization" ? orgTabs : doctorTabs);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Login' }],
-    });
-  };
-
-  const isHome = route.name === "Dashboard";
-  const title = titleMap[route.name] || "ClinLab";
+  const isDesktop = windowWidth >= 768;
   const isDark = theme === "dark";
+  const handleLogout = async () => { await supabase.auth.signOut(); navigation.reset({ index: 0, routes: [{ name: 'Login' }] }); };
 
-  return (
-    <View style={[
-      styles.container, 
-      isDark && styles.containerDark,
-      { paddingTop: insets.top } // Manually handle top inset
-    ]}>
-      {/* App header */}
-      <View style={[styles.header, isDark && styles.headerDark]}>
-        <View style={styles.headerLeft}>
-          <View style={styles.logoContainer}>
-            <Stethoscope size={18} color="#FFFFFF" />
-          </View>
-          <View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={styles.brandText}>ClinLab</Text>
-              <View style={[styles.roleBadge, role === 'organization' ? styles.roleBadgeOrg : styles.roleBadgeDr]}>
-                <Text style={styles.roleBadgeText}>{role}</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.headerRight}>
-          <TouchableOpacity onPress={toggle} style={styles.iconButton}>
-            {isDark ? <Sun size={18} color="#FFFFFF" /> : <Moon size={18} color="#0F172A" />}
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleLogout} style={styles.iconButton}>
-            <LogOut size={18} color="#64748B" />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            onPress={() => setIsNotificationsOpen(true)}
-            style={styles.iconButton}
-          >
-            <Bell size={18} color={isDark ? "#FFFFFF" : "#0F172A"} />
-            {hasNewNotifications && <View style={styles.notificationDot} />}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Main content */}
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
-        {children}
-      </ScrollView>
-
-      {/* Notifications Sidebar */}
-      <NotificationSidebar 
-        open={isNotificationsOpen} 
-        onOpenChange={setIsNotificationsOpen} 
-      />
-
-      {/* Bottom tab bar */}
-      <View style={[
-        styles.tabBar, 
-        isDark && styles.tabBarDark,
-        { paddingBottom: insets.bottom || 16 } // Ensure bottom visibility with safe area
-      ]}>
-        {activeTabs.map((tab) => {
-          const isActive = route.name === tab.name;
-          if (tab.primary) {
-            return (
-              <TouchableOpacity
-                key={tab.name}
-                onPress={() => navigation.navigate(tab.name)}
-                style={styles.primaryTab}
-              >
-                <View style={styles.primaryTabInner}>
-                  <Sparkles size={24} color="#FFFFFF" />
-                </View>
-              </TouchableOpacity>
-            );
-          }
+  const renderNav = () => (
+    <>
+      {activeTabs.map((tab) => {
+        const isActive = route.name === tab.name;
+        if (isDesktop) {
           return (
-            <TouchableOpacity
-              key={tab.name}
-              onPress={() => navigation.navigate(tab.name)}
-              style={styles.tabItem}
+            <TouchableOpacity 
+              key={tab.name} 
+              onPress={() => navigation.navigate(tab.name)} 
+              style={[
+                styles.navItemDesktop, 
+                isActive && (isDark ? styles.navItemActiveDesktopDark : styles.navItemActiveDesktop)
+              ]}
             >
-              <tab.icon size={20} color={isActive ? "#0EA5E9" : "#94A3B8"} />
-              <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
+              <tab.icon size={20} color={isActive ? "#0EA5E9" : (isDark ? "#94A3B8" : "#64748B")} />
+              <Text style={[
+                styles.navTextDesktop, 
+                isDark && styles.navTextDesktopDark,
+                isActive && styles.navTextActiveDesktop
+              ]}>
                 {tab.label}
               </Text>
             </TouchableOpacity>
           );
-        })}
+        }
+        if (tab.primary) return (
+          <TouchableOpacity key={tab.name} onPress={() => navigation.navigate(tab.name)} style={styles.primaryTab}>
+            <View style={styles.primaryTabInner}><Sparkles size={24} color="#FFFFFF" /></View>
+          </TouchableOpacity>
+        );
+        return (
+          <TouchableOpacity key={tab.name} onPress={() => navigation.navigate(tab.name)} style={styles.tabItem}>
+            <tab.icon size={20} color={isActive ? "#0EA5E9" : "#94A3B8"} />
+            <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>{tab.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </>
+  );
+
+  return (
+    <View style={[styles.container, isDark && styles.containerDark]}>
+      {isDesktop && (
+        <View style={[styles.sidebar, isDark && styles.sidebarDark]}>
+          <View style={styles.sidebarTop}>
+            <View style={styles.brandHeader}>
+              <View style={styles.logoContainer}><Stethoscope size={20} color="#FFFFFF" /></View>
+              <Text style={[styles.sidebarBrandText, isDark && styles.sidebarBrandTextDark]}>ClinLab</Text>
+            </View>
+            <View style={styles.navContainer}>{renderNav()}</View>
+          </View>
+          <View style={styles.sidebarBottom}>
+            <View style={[styles.roleBadge, role === "organization" ? styles.roleBadgeOrg : styles.roleBadgeDr]}>
+              <Text style={styles.roleBadgeText}>{role}</Text>
+            </View>
+            <View style={styles.sidebarBottomRow}>
+              <TouchableOpacity onPress={() => setIsNotificationsOpen(true)} style={styles.iconButton}>
+                <Bell size={20} color={isDark ? "#94A3B8" : "#64748B"} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={toggle} style={styles.iconButton}>
+                {isDark ? <Sun size={20} color="#94A3B8" /> : <Moon size={20} color="#64748B" />}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleLogout} style={styles.iconButton}>
+                <LogOut size={20} color={isDark ? "#94A3B8" : "#64748B"} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      <View style={styles.main}>
+        {!isDesktop && (
+          <View style={[styles.header, isDark && styles.headerDark, { paddingTop: insets.top }]}>
+            <Text style={styles.brandText}>ClinLab</Text>
+            <TouchableOpacity onPress={() => setIsNotificationsOpen(true)}><Bell size={20} color={isDark ? "#FFF" : "#000"} /></TouchableOpacity>
+          </View>
+        )}
+        <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
+          {children}
+        </ScrollView>
+        {!isDesktop && <View style={[styles.tabBar, isDark && styles.tabBarDark, { paddingBottom: insets.bottom || 16 }]}>{renderNav()}</View>}
       </View>
+      <NotificationSidebar open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen} />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { 
+    flex: 1, 
+    flexDirection: 'row', 
     backgroundColor: "#F8FAFC",
     ...(Platform.OS === 'web' ? { 
       position: 'fixed' as any, 
@@ -281,139 +188,63 @@ const styles = StyleSheet.create({
       width: '100%' as any,
     } : {}),
   },
-  containerDark: {
-    backgroundColor: "#0F172A",
+  containerDark: { backgroundColor: "#0F172A" },
+  main: { flex: 1, flexDirection: 'column', height: '100%' },
+  sidebar: { 
+    width: 240, 
+    borderRightWidth: 1, 
+    borderRightColor: "#E2E8F0", 
+    padding: 20, 
+    justifyContent: 'space-between',
+    backgroundColor: "#FFFFFF",
   },
-  header: {
-    height: 60,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(226, 232, 240, 0.6)",
+  sidebarDark: { 
+    borderRightColor: "#1E293B",
+    backgroundColor: "#0F172A"
   },
-  headerDark: {
-    backgroundColor: "rgba(15, 23, 42, 0.85)",
-    borderBottomColor: "rgba(30, 41, 59, 0.6)",
+  sidebarTop: { gap: 32 },
+  sidebarBottom: { gap: 12 },
+  brandHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  sidebarBrandText: { fontSize: 20, fontWeight: "bold", color: "#0F172A" },
+  sidebarBrandTextDark: { color: "#FFFFFF" },
+  navContainer: { gap: 4 },
+  navItemDesktop: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 12, 
+    paddingVertical: 10, 
+    paddingHorizontal: 12, 
+    borderRadius: 8,
   },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  logoContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: "#0EA5E9",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  brandText: {
-    fontSize: 11,
-    color: "#64748B",
-  },
-  roleBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  roleBadgeOrg: {
-    backgroundColor: "#F1F5F9",
-  },
-  roleBadgeDr: {
-    backgroundColor: "#E0F2FE",
-  },
-  roleBadgeText: {
-    fontSize: 9,
-    fontWeight: "700",
-    color: "#475569",
-    textTransform: "uppercase",
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  textWhite: {
-    color: "#FFFFFF",
-  },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  notificationDot: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#EF4444",
-  },
-  content: {
+  navItemActiveDesktop: { backgroundColor: "#F1F5F9" },
+  navItemActiveDesktopDark: { backgroundColor: "#1E293B" },
+  navTextDesktop: { color: "#64748B", fontWeight: "600", fontSize: 14 },
+  navTextDesktopDark: { color: "#94A3B8" },
+  navTextActiveDesktop: { color: "#0EA5E9" },
+  header: { height: 60, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16 },
+  headerDark: { backgroundColor: "#0F172A" },
+  content: { 
     flex: 1,
     ...(Platform.OS === 'web' ? { overflowY: 'auto' as any } : {}),
   },
   contentInner: {
     paddingBottom: 20,
   },
-  tabBar: {
-    height: Platform.OS === 'ios' ? 88 : 70, // Adjust for iOS home indicator
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    flexDirection: "row",
-    paddingHorizontal: 8,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(226, 232, 240, 0.6)",
-    zIndex: 100, // Ensure it's above content
-  },
-  tabBarDark: {
-    backgroundColor: "rgba(15, 23, 42, 0.95)",
-    borderTopColor: "rgba(30, 41, 59, 0.6)",
-  },
-  tabItem: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 2,
-  },
-  tabLabel: {
-    fontSize: 10,
-    fontWeight: "500",
-    color: "#94A3B8",
-  },
-  tabLabelActive: {
-    color: "#0EA5E9",
-  },
-  primaryTab: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  primaryTabInner: {
-    width: 48,
-    height: 48,
-    marginTop: -20,
-    borderRadius: 16,
-    backgroundColor: "#0EA5E9",
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 4,
-    shadowColor: "#0EA5E9",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
+  tabBar: { height: 70, flexDirection: "row", paddingHorizontal: 8, borderTopWidth: 1, borderTopColor: "#E2E8F0" },
+  tabBarDark: { backgroundColor: "#0F172A", borderTopColor: "#1E293B" },
+  tabItem: { flex: 1, alignItems: "center", justifyContent: "center" },
+  tabLabel: { fontSize: 10, color: "#94A3B8" },
+  tabLabelActive: { color: "#0EA5E9" },
+  primaryTab: { flex: 1, alignItems: "center", justifyContent: "center" },
+  primaryTabInner: { width: 48, height: 48, borderRadius: 16, backgroundColor: "#0EA5E9", alignItems: "center", justifyContent: "center", marginTop: -20 },
+  logoContainer: { width: 36, height: 36, borderRadius: 10, backgroundColor: "#0EA5E9", alignItems: "center", justifyContent: "center" },
+  brandText: { fontSize: 18, fontWeight: "bold", color: "#0EA5E9" },
+  roleBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, alignSelf: 'flex-start' },
+  roleBadgeOrg: { backgroundColor: "#F1F5F9" },
+  roleBadgeDr: { backgroundColor: "#E0F2FE" },
+  roleBadgeText: { fontSize: 10, fontWeight: "700", color: "#0369A1", textTransform: "uppercase" },
+  iconButton: { padding: 8 },
+  sidebarBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
 });
 
 export default AppLayout;
