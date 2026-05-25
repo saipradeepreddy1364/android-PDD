@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Platform } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Platform, DeviceEventEmitter } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
 import {
@@ -91,7 +91,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    const subscription = supabase
+    const realtimeSub = supabase
       .channel(`app-layout-approvals-${Date.now()}`)
       .on('postgres_changes', { 
         event: '*', 
@@ -102,8 +102,11 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       })
       .subscribe();
 
+    const eventSub = DeviceEventEmitter.addListener('refreshPendingCount', fetchPendingCount);
+
     return () => {
-      supabase.removeChannel(subscription);
+      supabase.removeChannel(realtimeSub);
+      eventSub.remove();
     };
   }, [role]);
 

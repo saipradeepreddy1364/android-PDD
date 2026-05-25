@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, DeviceEventEmitter } from "react-native";
 import { Bell, Info, AlertTriangle, CheckCircle2 } from "lucide-react-native";
 import { SheetContent, SheetHeader, SheetTitle, SheetDescription } from "./ui/sheet";
 import { supabase } from "@/lib/supabase";
@@ -103,12 +103,35 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
   };
 
   const handleNotificationPress = (n: Notification) => {
-    onOpenChange(false); // Close sidebar first
     if (n.id.startsWith("pending-")) {
-      // Delay navigation to allow the modal close animation to complete
+      // Don't navigate automatically anymore, let them use the buttons
+      // Or they can click the row to navigate if they want
+      onOpenChange(false); // Close sidebar first
       setTimeout(() => {
         navigation.navigate("ApprovalCenter");
       }, 350);
+    }
+  };
+
+  const handleAction = async (doctorId: string, status: 'approved' | 'rejected') => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status })
+        .eq('id', doctorId);
+        
+      if (error) throw error;
+      
+      // Instantly remove this notification from the list
+      setNotifications(prev => prev.filter(n => n.id !== `pending-${doctorId}`));
+      
+      // Tell AppLayout to recalculate pending approvals so the orange dot goes away
+      DeviceEventEmitter.emit('refreshPendingCount');
+
+      Alert.alert("Success", `Doctor successfully ${status}.`);
+    } catch (err) {
+      console.error("Error updating status:", err);
+      Alert.alert("Error", "Failed to update doctor status.");
     }
   };
 
@@ -149,9 +172,29 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
                   <Text style={styles.time}>{n.time}</Text>
                 </View>
                 <Text style={[styles.message, isDark && styles.messageDark]} numberOfLines={2}>{n.message}</Text>
-                {n.id.startsWith("pending-") && (
-                  <Text style={styles.clickToApprove}>Click to open Approval Center</Text>
-                )}
+                {n.id.startsWith("pending-") ? (
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity 
+                      style={[styles.actionBtn, { backgroundColor: '#0EA5E9' }]} 
+                      onPress={(e) => {
+                         // On web e might not be a standard event if used differently, but we can try stopPropagation
+                         if (e && e.stopPropagation) e.stopPropagation();
+                         handleAction(n.id.replace('pending-', ''), 'approved');
+                      }}
+                    >
+                      <Text style={styles.actionBtnText}>Approve</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.actionBtn, { backgroundColor: '#EF4444' }]} 
+                      onPress={(e) => {
+                         if (e && e.stopPropagation) e.stopPropagation();
+                         handleAction(n.id.replace('pending-', ''), 'rejected');
+                      }}
+                    >
+                      <Text style={styles.actionBtnText}>Reject</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
               </View>
             </TouchableOpacity>
           ))
@@ -303,5 +346,23 @@ const styles = StyleSheet.create({
   },
   emptyTextDark: {
     color: "#94A3B8",
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  actionBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: 'bold',
   },
 });
