@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
 import {
   LayoutDashboard,
   FilePlus2,
@@ -62,29 +62,34 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     return () => subscription.remove();
   }, []);
 
+  const fetchPendingCount = async () => {
+    if (role !== "organization") return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { count, error } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('org_id', user.id)
+      .eq('role', 'doctor')
+      .eq('status', 'pending');
+
+    if (!error && count !== null) {
+      setPendingApprovalsCount(count);
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchPendingCount();
+    }, [role])
+  );
+
   useEffect(() => {
     if (role !== "organization") {
       setPendingApprovalsCount(0);
       return;
     }
-
-    const fetchPendingCount = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { count, error } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('org_id', user.id)
-        .eq('role', 'doctor')
-        .eq('status', 'pending');
-
-      if (!error && count !== null) {
-        setPendingApprovalsCount(count);
-      }
-    };
-
-    fetchPendingCount();
 
     const subscription = supabase
       .channel(`app-layout-approvals-${Date.now()}`)
@@ -278,7 +283,7 @@ const styles = StyleSheet.create({
   navTextDesktop: { color: "#64748B", fontWeight: "600", fontSize: 14 },
   navTextDesktopDark: { color: "#94A3B8" },
   navTextActiveDesktop: { color: "#0EA5E9" },
-  header: { height: 60, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16 },
+  header: { height: 60, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, backgroundColor: "#FFFFFF" },
   headerDark: { backgroundColor: "#0F172A" },
   content: { 
     flex: 1,
