@@ -12,18 +12,49 @@ const ApprovalCenter = () => {
   const [tab, setTab] = useState<"pending" | "approved">("pending");
 
   const fetchDoctors = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('org_id', user.id)
-      .eq('role', 'doctor')
-      .order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('org_id', user.id)
+        .eq('role', 'doctor')
+        .order('created_at', { ascending: false });
 
-    if (data) setDoctors(data);
-    setLoading(false);
+      if (error) {
+        console.error("ApprovalCenter: Error loading profiles:", error);
+      }
+      if (data) {
+        setDoctors(data);
+      }
+    } catch (err) {
+      console.error("ApprovalCenter: fetchDoctors exception:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateStr: any) => {
+    if (!dateStr) return "N/A";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "N/A";
+    return d.toLocaleDateString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric'
+    });
+  };
+
+  const formatTime = (dateStr: any) => {
+    if (!dateStr) return "N/A";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "N/A";
+    return d.toLocaleTimeString('en-IN', {
+      hour: '2-digit', minute: '2-digit', hour12: true
+    });
   };
 
   useEffect(() => {
@@ -143,11 +174,7 @@ const ApprovalCenter = () => {
                       <View style={styles.infoRow}>
                         <Calendar size={12} color="#94A3B8" />
                         <Text style={styles.timeText}>
-                          Applied {new Date(doc.created_at).toLocaleDateString('en-IN', {
-                            day: '2-digit', month: 'short', year: 'numeric'
-                          })} at {new Date(doc.created_at).toLocaleTimeString('en-IN', {
-                            hour: '2-digit', minute: '2-digit', hour12: true
-                          })}
+                          Applied {formatDate(doc.created_at)} at {formatTime(doc.created_at)}
                         </Text>
                       </View>
                     </View>
