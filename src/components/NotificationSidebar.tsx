@@ -1,146 +1,157 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, DeviceEventEmitter } from "react-native";
-import { Bell, Info, AlertTriangle, CheckCircle2 } from "lucide-react-native";
+import React, { useEffect, useState, useRef } from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, DeviceEventEmitter, ActivityIndicator } from "react-native";
+import { Bell, Info, AlertTriangle, CheckCircle2, Mail, Phone, Stethoscope, Calendar, UserCheck, UserX } from "lucide-react-native";
 import { SheetContent, SheetHeader, SheetTitle, SheetDescription } from "./ui/sheet";
 import { supabase } from "@/lib/supabase";
-import { useNavigation } from "@react-navigation/native";
 import { useTheme } from "./ThemeProvider";
 
-type Notification = {
+type PendingDoctor = {
+  id: string;
+  full_name: string;
+  email?: string;
+  phone?: string;
+  specialization?: string;
+  created_at: string;
+  org_name?: string;
+};
+
+type CaseNotification = {
   id: string;
   title: string;
   message: string;
   type: "info" | "urgent" | "update";
   time: string;
-  read: boolean;
 };
 
+type UserRole = "organization" | "doctor" | null;
+
 export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const navigation = useNavigation<any>();
+  const [pendingDoctors, setPendingDoctors] = useState<PendingDoctor[]>([]);
+  const [caseNotifs, setCaseNotifs] = useState<CaseNotification[]>([]);
+  const [userRole, setUserRole] = useState<UserRole>(null);
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
-  useEffect(() => {
-    const fetchRecentChanges = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+  // Cache session to avoid repeated getUser() calls
+  const sessionRef = useRef<{ userId: string; role: UserRole } | null>(null);
 
+  const loadSession = async () => {
+    if (sessionRef.current) return sessionRef.current;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return null;
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
+    const result = { userId: session.user.id, role: (profile?.role ?? null) as UserRole };
+    sessionRef.current = result;
+    return result;
+  };
+
+  const fetchData = async () => {
+    const sess = await loadSession();
+    if (!sess) return;
+    setUserRole(sess.role);
+
+    if (sess.role === 'organization') {
+      // Fetch full doctor details for pending approvals
+      const { data: doctors } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, phone, specialization, created_at, org_name')
+        .eq('org_id', sess.userId)
+        .eq('role', 'doctor')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (doctors) setPendingDoctors(doctors);
+    } else if (sess.role === 'doctor') {
+      // Fetch recent case updates for doctors
       const { data: cases } = await supabase
         .from('cases')
-        .select('*')
-        .eq('doctor_id', user.id)
+        .select('id, patient_name, tooth_number, diagnosis, is_urgent, status, created_at')
+        .eq('doctor_id', sess.userId)
         .order('created_at', { ascending: false })
         .limit(10);
 
-      let newNotifs: Notification[] = [];
-
       if (cases) {
-        const mapped: Notification[] = cases.map(c => ({
+        const mapped: CaseNotification[] = cases.map(c => ({
           id: c.id,
-          title: c.is_urgent ? "🚨 Urgent Case" : "New Case Assigned",
-          message: `${c.patient_name}: Tooth ${c.tooth_number} - ${c.diagnosis}`,
+          title: c.is_urgent ? "🚨 Urgent Case" : "Case Assigned",
+          message: `${c.patient_name}: Tooth ${c.tooth_number} — ${c.diagnosis}`,
           type: c.is_urgent ? "urgent" : "info",
           time: new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          read: false
         }));
-        newNotifs = [...newNotifs, ...mapped];
+        setCaseNotifs(mapped);
       }
-
-      // If Organization, fetch pending doctors
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-      if (profile?.role === 'organization') {
-        const { data: pendingDoctors } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('org_id', user.id)
-          .eq('role', 'doctor')
-          .eq('status', 'pending');
-        
-        if (pendingDoctors && pendingDoctors.length > 0) {
-          const doctorAlerts: Notification[] = pendingDoctors.map(d => ({
-            id: `pending-${d.id}`,
-            title: "👨‍⚕️ Doctor Approval",
-            message: `${d.full_name} is waiting for access approval.`,
-            type: "urgent",
-            time: "Just Now",
-            read: false
-          }));
-          newNotifs = [...doctorAlerts, ...newNotifs];
-        }
-      }
-
-      setNotifications(newNotifs);
-    };
-
-    if (open) {
-      fetchRecentChanges();
-
-      // Poll every 100ms while open for near-continuous updates
-      const pollInterval = setInterval(fetchRecentChanges, 100);
-
-      // Subscribe to realtime changes while open
-      const channel = supabase
-        .channel('sidebar-realtime-' + Date.now())
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'cases' },
-          () => {
-            fetchRecentChanges();
-          }
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'profiles' },
-          () => {
-            fetchRecentChanges();
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-        clearInterval(pollInterval);
-      };
     }
+  };
+
+  useEffect(() => {
+    if (!open) return;
+
+    // Invalidate session cache when re-opened so role re-resolves
+    sessionRef.current = null;
+    fetchData();
+
+    // Poll every 1s while open — realtime handles instant updates
+    const pollInterval = setInterval(fetchData, 1000);
+
+    const channel = supabase
+      .channel('sidebar-realtime-' + Date.now())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cases' }, fetchData)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(pollInterval);
+    };
   }, [open]);
 
-  const getIcon = (type: Notification["type"]) => {
-    switch (type) {
-      case "urgent": return <AlertTriangle size={18} color="#EF4444" />;
-      case "update": return <CheckCircle2 size={18} color="#0EA5E9" />;
-      default: return <Info size={18} color="#64748B" />;
-    }
-  };
-
-  const handleNotificationPress = (n: Notification) => {
-    if (n.id.startsWith("pending-")) {
-      // Do nothing, Approve/Reject are handled directly via the buttons
-      return;
-    }
-  };
-
   const handleAction = async (doctorId: string, status: 'approved' | 'rejected') => {
+    // Optimistic removal — instant UI feedback before DB call completes
+    setPendingDoctors(prev => prev.filter(d => d.id !== doctorId));
+    setProcessingIds(prev => new Set(prev).add(doctorId));
+
     try {
       const { error } = await supabase
         .from('profiles')
         .update({ status })
         .eq('id', doctorId);
-        
-      if (error) throw error;
-      
-      // Instantly remove this notification from the list
-      setNotifications(prev => prev.filter(n => n.id !== `pending-${doctorId}`));
-      
-      // Tell AppLayout to recalculate pending approvals so the orange dot goes away
-      DeviceEventEmitter.emit('refreshPendingCount');
 
-      Alert.alert("Success", `Doctor successfully ${status}.`);
-    } catch (err) {
+      if (error) throw error;
+      DeviceEventEmitter.emit('refreshPendingCount');
+    } catch (err: any) {
+      // Revert optimistic update on error
       console.error("Error updating status:", err);
-      Alert.alert("Error", "Failed to update doctor status.");
+      fetchData(); // Re-fetch to restore correct state
+      Alert.alert("Error", "Failed to update doctor status. Please try again.");
+    } finally {
+      setProcessingIds(prev => {
+        const next = new Set(prev);
+        next.delete(doctorId);
+        return next;
+      });
     }
   };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return "N/A";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "N/A";
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHrs = Math.floor(diffMins / 60);
+    if (diffHrs < 24) return `${diffHrs}h ago`;
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+  };
+
+  const totalCount = pendingDoctors.length + caseNotifs.length;
 
   return (
     <SheetContent open={open} onOpenChange={onOpenChange} side="right" style={[styles.sheetContent, isDark && styles.sheetContentDark]}>
@@ -148,68 +159,146 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
         <View style={styles.titleRow}>
           <Bell size={20} color={isDark ? "#FFF" : "#0F172A"} />
           <SheetTitle style={[styles.title, isDark && styles.titleDark]}>Notifications</SheetTitle>
+          {totalCount > 0 && (
+            <View style={styles.countBadge}>
+              <Text style={styles.countBadgeText}>{totalCount}</Text>
+            </View>
+          )}
           <SheetDescription style={{ display: "none" }}>
             View your recent clinical updates and alerts.
           </SheetDescription>
         </View>
-        <TouchableOpacity onPress={() => setNotifications([])}>
+        <TouchableOpacity onPress={() => { setPendingDoctors([]); setCaseNotifs([]); }}>
           <Text style={styles.clearAll}>Clear all</Text>
         </TouchableOpacity>
       </SheetHeader>
 
-      <ScrollView style={styles.list} showsVerticalScrollIndicator={false} contentContainerStyle={notifications.length === 0 && { flex: 1 }}>
-        {notifications.length > 0 ? (
-          notifications.map((n) => (
-            <TouchableOpacity 
-              key={n.id} 
-              onPress={() => handleNotificationPress(n)}
-              style={[
-                styles.notificationItem, 
-                !n.read && (isDark ? styles.unreadItemDark : styles.unreadItem),
-                isDark && styles.notificationItemDark
-              ]}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.iconContainer, (styles as any)[`${n.type}Icon`]]}>
-                {getIcon(n.type)}
-              </View>
-              <View style={styles.content}>
-                <View style={styles.itemHeader}>
-                  <Text style={[styles.itemTitle, isDark && styles.itemTitleDark]}>{n.title}</Text>
-                  <Text style={styles.time}>{n.time}</Text>
+      <ScrollView style={styles.list} showsVerticalScrollIndicator={false} contentContainerStyle={totalCount === 0 && { flex: 1 }}>
+        {totalCount > 0 ? (
+          <>
+            {/* Pending Doctor Approvals */}
+            {pendingDoctors.length > 0 && (
+              <>
+                <View style={[styles.sectionLabel, isDark && styles.sectionLabelDark]}>
+                  <Text style={[styles.sectionLabelText, isDark && styles.sectionLabelTextDark]}>
+                    PENDING APPROVALS · {pendingDoctors.length}
+                  </Text>
                 </View>
-                <Text style={[styles.message, isDark && styles.messageDark]} numberOfLines={2}>{n.message}</Text>
-                {n.id.startsWith("pending-") ? (
-                  <View style={styles.actionRow}>
-                    <TouchableOpacity 
-                      style={[styles.actionBtn, { backgroundColor: '#0EA5E9' }]} 
-                      onPress={(e) => {
-                         // On web e might not be a standard event if used differently, but we can try stopPropagation
-                         if (e && e.stopPropagation) e.stopPropagation();
-                         handleAction(n.id.replace('pending-', ''), 'approved');
-                      }}
+                {pendingDoctors.map((doc) => {
+                  const isProcessing = processingIds.has(doc.id);
+                  return (
+                    <View
+                      key={doc.id}
+                      style={[styles.doctorCard, isDark && styles.doctorCardDark]}
                     >
-                      <Text style={styles.actionBtnText}>Approve</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={[styles.actionBtn, { backgroundColor: '#EF4444' }]} 
-                      onPress={(e) => {
-                         if (e && e.stopPropagation) e.stopPropagation();
-                         handleAction(n.id.replace('pending-', ''), 'rejected');
-                      }}
-                    >
-                      <Text style={styles.actionBtnText}>Reject</Text>
-                    </TouchableOpacity>
+                      {/* Avatar + Name Row */}
+                      <View style={styles.doctorTopRow}>
+                        <View style={styles.avatar}>
+                          <Text style={styles.avatarText}>{doc.full_name?.charAt(0)?.toUpperCase() || "D"}</Text>
+                        </View>
+                        <View style={styles.doctorInfo}>
+                          <Text style={[styles.doctorName, isDark && styles.doctorNameDark]} numberOfLines={1}>
+                            {doc.full_name || "Unknown Doctor"}
+                          </Text>
+                          <Text style={styles.requestedAt}>Requested {formatDate(doc.created_at)}</Text>
+                        </View>
+                      </View>
+
+                      {/* Detail rows */}
+                      <View style={styles.detailList}>
+                        {doc.specialization ? (
+                          <View style={styles.detailRow}>
+                            <Stethoscope size={11} color="#64748B" />
+                            <Text style={styles.detailText}>{doc.specialization}</Text>
+                          </View>
+                        ) : null}
+                        {doc.email ? (
+                          <View style={styles.detailRow}>
+                            <Mail size={11} color="#64748B" />
+                            <Text style={styles.detailText} numberOfLines={1}>{doc.email}</Text>
+                          </View>
+                        ) : null}
+                        {doc.phone ? (
+                          <View style={styles.detailRow}>
+                            <Phone size={11} color="#64748B" />
+                            <Text style={styles.detailText}>{doc.phone}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+
+                      {/* Action Buttons */}
+                      <View style={styles.actionRow}>
+                        <TouchableOpacity
+                          style={[styles.rejectBtn, isProcessing && styles.btnDisabled]}
+                          disabled={isProcessing}
+                          onPress={() => handleAction(doc.id, 'rejected')}
+                        >
+                          {isProcessing ? (
+                            <ActivityIndicator size="small" color="#EF4444" />
+                          ) : (
+                            <>
+                              <UserX size={13} color="#EF4444" />
+                              <Text style={styles.rejectBtnText}>Reject</Text>
+                            </>
+                          )}
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.approveBtn, isProcessing && styles.btnDisabled]}
+                          disabled={isProcessing}
+                          onPress={() => handleAction(doc.id, 'approved')}
+                        >
+                          {isProcessing ? (
+                            <ActivityIndicator size="small" color="#FFF" />
+                          ) : (
+                            <>
+                              <UserCheck size={13} color="#FFFFFF" />
+                              <Text style={styles.approveBtnText}>Approve</Text>
+                            </>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })}
+              </>
+            )}
+
+            {/* Case notifications (doctors) */}
+            {caseNotifs.length > 0 && (
+              <>
+                <View style={[styles.sectionLabel, isDark && styles.sectionLabelDark]}>
+                  <Text style={[styles.sectionLabelText, isDark && styles.sectionLabelTextDark]}>
+                    CASE UPDATES · {caseNotifs.length}
+                  </Text>
+                </View>
+                {caseNotifs.map((n) => (
+                  <View
+                    key={n.id}
+                    style={[styles.caseItem, isDark && styles.caseItemDark]}
+                  >
+                    <View style={[styles.iconContainer, n.type === "urgent" ? styles.urgentIcon : n.type === "update" ? styles.updateIcon : styles.infoIcon]}>
+                      {n.type === "urgent" ? <AlertTriangle size={16} color="#EF4444" /> : n.type === "update" ? <CheckCircle2 size={16} color="#0EA5E9" /> : <Info size={16} color="#64748B" />}
+                    </View>
+                    <View style={styles.caseContent}>
+                      <View style={styles.itemHeader}>
+                        <Text style={[styles.itemTitle, isDark && styles.itemTitleDark]} numberOfLines={1}>{n.title}</Text>
+                        <Text style={styles.time}>{n.time}</Text>
+                      </View>
+                      <Text style={[styles.message, isDark && styles.messageDark]} numberOfLines={2}>{n.message}</Text>
+                    </View>
                   </View>
-                ) : null}
-              </View>
-            </TouchableOpacity>
-          ))
+                ))}
+              </>
+            )}
+          </>
         ) : (
           <View style={styles.emptyState}>
-            <Text style={[styles.emptyTitle, isDark && styles.emptyTitleDark]}>Welcome to ClinLab</Text>
+            <Bell size={40} color={isDark ? "#334155" : "#E2E8F0"} />
+            <Text style={[styles.emptyTitle, isDark && styles.emptyTitleDark]}>All caught up!</Text>
             <Text style={[styles.emptyText, isDark && styles.emptyTextDark]}>
-              Your realtime notification center is now active. You'll see clinical updates and case alerts here.
+              {userRole === "organization"
+                ? "No pending doctor approvals. New requests will appear here automatically."
+                : "No new case updates. Your realtime notification center is active."}
             </Text>
           </View>
         )}
@@ -239,97 +328,115 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
-  headerDark: {
-    borderBottomColor: "#1E293B",
-  },
-  titleRow: {
-    flexDirection: "row",
+  headerDark: { borderBottomColor: "#1E293B" },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  title: { fontSize: 18, fontWeight: "700", color: "#0F172A" },
+  titleDark: { color: "#FFFFFF" },
+  countBadge: {
+    backgroundColor: "#EF4444",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
     alignItems: "center",
-    gap: 10,
+    justifyContent: "center",
+    paddingHorizontal: 5,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#0F172A",
+  countBadgeText: { color: "#FFFFFF", fontSize: 10, fontWeight: "700" },
+  clearAll: { fontSize: 12, color: "#64748B", fontWeight: "500" },
+  list: { flex: 1 },
+  // Section labels
+  sectionLabel: {
+    backgroundColor: "#F8FAFC",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
   },
-  titleDark: {
-    color: "#FFFFFF",
-  },
-  clearAll: {
-    fontSize: 12,
-    color: "#64748B",
-    fontWeight: "500",
-  },
-  list: {
-    flex: 1,
-  },
-  notificationItem: {
-    flexDirection: "row",
+  sectionLabelDark: { backgroundColor: "#1E293B", borderBottomColor: "#334155" },
+  sectionLabelText: { fontSize: 10, fontWeight: "700", color: "#94A3B8", letterSpacing: 0.8 },
+  sectionLabelTextDark: { color: "#64748B" },
+  // Doctor approval card
+  doctorCard: {
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
+    gap: 10,
+    backgroundColor: "#FFFBF5",
+  },
+  doctorCardDark: { backgroundColor: "#1A120A", borderBottomColor: "#2A1E0A" },
+  doctorTopRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: "#FEF3C7",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#F59E0B",
+  },
+  avatarText: { fontSize: 16, fontWeight: "700", color: "#D97706" },
+  doctorInfo: { flex: 1, gap: 2 },
+  doctorName: { fontSize: 14, fontWeight: "700", color: "#0F172A" },
+  doctorNameDark: { color: "#FFFFFF" },
+  requestedAt: { fontSize: 11, color: "#94A3B8" },
+  detailList: { gap: 4, paddingLeft: 2 },
+  detailRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  detailText: { fontSize: 12, color: "#64748B", flex: 1 },
+  actionRow: { flexDirection: "row", gap: 8, marginTop: 4 },
+  approveBtn: {
+    flex: 1,
+    height: 36,
+    backgroundColor: "#0EA5E9",
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+  },
+  approveBtnText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
+  rejectBtn: {
+    flex: 1,
+    height: 36,
+    backgroundColor: "#FEE2E2",
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  rejectBtnText: { color: "#EF4444", fontSize: 13, fontWeight: "700" },
+  btnDisabled: { opacity: 0.5 },
+  // Case notification item
+  caseItem: {
+    flexDirection: "row",
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
     gap: 12,
+    alignItems: "flex-start",
   },
-  notificationItemDark: {
-    borderBottomColor: "#1E293B",
-  },
-  unreadItem: {
-    backgroundColor: "rgba(14, 165, 233, 0.02)",
-  },
-  unreadItemDark: {
-    backgroundColor: "rgba(14, 165, 233, 0.05)",
-  },
+  caseItemDark: { borderBottomColor: "#1E293B" },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
-  infoIcon: {
-    backgroundColor: "rgba(100, 116, 139, 0.1)",
-  },
-  urgentIcon: {
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
-  },
-  updateIcon: {
-    backgroundColor: "rgba(14, 165, 233, 0.1)",
-  },
-  content: {
-    flex: 1,
-    gap: 2,
-  },
-  itemHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  itemTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#0F172A",
-  },
-  itemTitleDark: {
-    color: "#FFFFFF",
-  },
-  time: {
-    fontSize: 10,
-    color: "#94A3B8",
-  },
-  message: {
-    fontSize: 12,
-    color: "#64748B",
-    lineHeight: 18,
-  },
-  messageDark: {
-    color: "#94A3B8",
-  },
-  clickToApprove: {
-    fontSize: 11,
-    color: "#0EA5E9",
-    fontWeight: "600",
-    marginTop: 4,
-  },
+  infoIcon: { backgroundColor: "rgba(100, 116, 139, 0.1)" },
+  urgentIcon: { backgroundColor: "rgba(239, 68, 68, 0.1)" },
+  updateIcon: { backgroundColor: "rgba(14, 165, 233, 0.1)" },
+  caseContent: { flex: 1, gap: 2 },
+  itemHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  itemTitle: { fontSize: 13, fontWeight: "600", color: "#0F172A", flex: 1 },
+  itemTitleDark: { color: "#FFFFFF" },
+  time: { fontSize: 10, color: "#94A3B8", marginLeft: 4 },
+  message: { fontSize: 12, color: "#64748B", lineHeight: 17 },
+  messageDark: { color: "#94A3B8" },
+  // Empty state
   emptyState: {
     padding: 40,
     alignItems: "center",
@@ -337,39 +444,8 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 60,
   },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#0F172A",
-  },
-  emptyTitleDark: {
-    color: "#FFFFFF",
-  },
-  emptyText: {
-    fontSize: 13,
-    color: "#64748B",
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  emptyTextDark: {
-    color: "#94A3B8",
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
-  },
-  actionBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: 'bold',
-  },
+  emptyTitle: { fontSize: 16, fontWeight: "600", color: "#0F172A", marginTop: 8 },
+  emptyTitleDark: { color: "#FFFFFF" },
+  emptyText: { fontSize: 13, color: "#64748B", textAlign: "center", lineHeight: 20 },
+  emptyTextDark: { color: "#94A3B8" },
 });

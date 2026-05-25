@@ -5,51 +5,61 @@ import { sendLocalNotification } from '@/lib/notifications';
 
 export const useNotifications = () => {
   useEffect(() => {
+    let cleanupFn: (() => void) | undefined;
+
     const setupRealtime = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      // Use getSession() — no auth lock contention unlike getUser()
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const userId = session.user.id;
 
       const { data: profile } = await supabase
         .from('profiles')
         .select('role')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single();
-      
+
       if (!profile) return;
 
+      // Track known pending IDs to only notify on NEW entries
       let lastPendingIds = new Set<string>();
 
-      // If org, get initial pending doctors list
       if (profile.role === 'organization') {
         const { data: initialPending } = await supabase
           .from('profiles')
           .select('id')
-          .eq('org_id', user.id)
+          .eq('org_id', userId)
           .eq('role', 'doctor')
           .eq('status', 'pending');
         if (initialPending) {
-          lastPendingIds = new Set(initialPending.map(d => d.id));
+          lastPendingIds = new Set(initialPending.map((d: any) => d.id));
         }
       }
 
+      // Cached query — no getUser() inside, uses session userId directly
       const checkPendingApprovals = async () => {
         if (profile.role !== 'organization') return;
 
         const { data: pendingDoctors } = await supabase
           .from('profiles')
           .select('id, full_name')
-          .eq('org_id', user.id)
+          .eq('org_id', userId)
           .eq('role', 'doctor')
           .eq('status', 'pending');
 
         if (pendingDoctors) {
-          const currentIds = new Set(pendingDoctors.map(d => d.id));
-          
+          const currentIds = new Set(pendingDoctors.map((d: any) => d.id));
           for (const doc of pendingDoctors) {
             if (!lastPendingIds.has(doc.id)) {
-              showNativeNotification(`👨‍⚕️ New Doctor Access Request`, {
-                body: `${doc.full_name || 'A doctor'} has requested approval to join your organization.`,
-              });
+              try {
+                await sendLocalNotification(
+                  '👨‍⚕️ New Doctor Access Request',
+                  `${doc.full_name || 'A doctor'} has requested approval to join your organization.`
+                );
+              } catch (e) {
+                console.log('Push Notification: New Doctor Access Request', doc.full_name);
+              }
               DeviceEventEmitter.emit('refreshPendingCount');
             }
           }
@@ -57,83 +67,57 @@ export const useNotifications = () => {
         }
       };
 
-      // Poll every 100ms for near-continuous background changes
-      let pollInterval: any;
-      if (profile.role === 'organization') {
-        pollInterval = setInterval(checkPendingApprovals, 100);
-      }
-
-      // Realtime fallback
+      let pollInterval: ReturnType<typeof setInterval> | undefined;
       let channel: any;
+
       if (profile.role === 'organization') {
+        // Poll every 1 second as reliable fallback — realtime handles instant
+        pollInterval = setInterval(checkPendingApprovals, 1000);
+
         channel = supabase
           .channel('org-approval-notifications-' + Date.now())
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'profiles',
-              filter: `org_id=eq.${user.id}`,
-            },
-            () => {
-              checkPendingApprovals();
-            }
-          )
+          .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'profiles',
+            filter: `org_id=eq.${userId}`,
+          }, () => {
+            checkPendingApprovals();
+          })
           .subscribe();
       } else {
+        // Doctors: subscribe to case updates
         channel = supabase
           .channel('doctor-case-notifications-' + Date.now())
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'cases',
-              filter: `doctor_id=eq.${user.id}`,
-            },
-            (payload) => {
-              const newCase = payload.new as any;
-              const oldCase = payload.old as any;
-
-              if (payload.eventType === 'INSERT' && (newCase.is_urgent || newCase.status === 'in-progress' || newCase.status === 'pending')) {
-                showNativeNotification(`New Case Alert: ${newCase.patient_name}`, {
-                  body: `Tooth ${newCase.tooth_number}: ${newCase.diagnosis}`,
-                });
-              } else if (payload.eventType === 'UPDATE' && newCase.status !== oldCase.status) {
-                showNativeNotification(`Case Update: ${newCase.patient_name}`, {
-                  body: `Status changed to ${newCase.status}`,
-                });
-              }
+          .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'cases',
+            filter: `doctor_id=eq.${userId}`,
+          }, (payload) => {
+            const newCase = payload.new as any;
+            const oldCase = payload.old as any;
+            if (payload.eventType === 'INSERT') {
+              console.log('Push Notification: New Case Alert', newCase.patient_name);
+            } else if (payload.eventType === 'UPDATE' && newCase.status !== oldCase?.status) {
+              console.log('Push Notification: Case Update', newCase.patient_name, '->', newCase.status);
             }
-          )
+          })
           .subscribe();
       }
 
-      return () => {
+      cleanupFn = () => {
         if (channel) supabase.removeChannel(channel);
         if (pollInterval) clearInterval(pollInterval);
       };
     };
 
-    let cleanupFn: () => void;
-    setupRealtime().then(cleanup => {
-      if (cleanup) cleanupFn = cleanup;
-    });
+    setupRealtime();
 
     return () => {
       if (cleanupFn) cleanupFn();
     };
   }, []);
 
-  const showNativeNotification = async (title: string, options?: { body: string }) => {
-    try {
-      await sendLocalNotification(title, options?.body || '');
-    } catch (e) {
-      console.error("Error sending native notification:", e);
-    }
-    console.log("Push Notification:", title, options?.body);
-  };
-
-  return { showNativeNotification };
+  return {};
 };

@@ -53,6 +53,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const [windowWidth, setWindowWidth] = useState(Dimensions.get("window").width);
   const insets = useSafeAreaInsets();
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
+  const [orgUserId, setOrgUserId] = useState<string | null>(null);
   
   useNotifications();
 
@@ -62,22 +63,23 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     return () => subscription.remove();
   }, []);
 
-  const fetchPendingCount = async () => {
+  const fetchPendingCount = React.useCallback(async (userId?: string) => {
     if (role !== "organization") return;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    // Use cached userId or the one passed in — avoids getUser() lock on every tick
+    const uid = userId || orgUserId;
+    if (!uid) return;
 
     const { count, error } = await supabase
       .from('profiles')
       .select('*', { count: 'exact', head: true })
-      .eq('org_id', user.id)
+      .eq('org_id', uid)
       .eq('role', 'doctor')
       .eq('status', 'pending');
 
     if (!error && count !== null) {
       setPendingApprovalsCount(count);
     }
-  };
+  }, [role, orgUserId]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -86,15 +88,15 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   );
 
   useEffect(() => {
-    if (role !== "organization") {
+    if (role !== "organization" || !orgUserId) {
       setPendingApprovalsCount(0);
       return;
     }
 
-    fetchPendingCount();
+    fetchPendingCount(orgUserId);
 
-    // Poll every 100ms for near-continuous updates
-    const pollInterval = setInterval(fetchPendingCount, 100);
+    // Poll every 1 second — realtime channel handles instant updates
+    const pollInterval = setInterval(() => fetchPendingCount(orgUserId), 1000);
 
     const realtimeSub = supabase
       .channel(`app-layout-approvals-${Date.now()}`)
@@ -103,18 +105,18 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         schema: 'public', 
         table: 'profiles'
       }, () => {
-        fetchPendingCount();
+        fetchPendingCount(orgUserId);
       })
       .subscribe();
 
-    const eventSub = DeviceEventEmitter.addListener('refreshPendingCount', fetchPendingCount);
+    const eventSub = DeviceEventEmitter.addListener('refreshPendingCount', () => fetchPendingCount(orgUserId));
 
     return () => {
       supabase.removeChannel(realtimeSub);
       eventSub.remove();
       clearInterval(pollInterval);
     };
-  }, [role]);
+  }, [role, orgUserId]);
 
   useEffect(() => {
     let authListener: any;
@@ -125,7 +127,12 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-      if (profile) setRole(profile.role);
+      if (profile) {
+        setRole(profile.role);
+        if (profile.role === 'organization') {
+          setOrgUserId(session.user.id);
+        }
+      }
     };
 
     checkUser();
