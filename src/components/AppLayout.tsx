@@ -87,7 +87,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     fetchPendingCount();
 
     const subscription = supabase
-      .channel('app-layout-approvals')
+      .channel(`app-layout-approvals-${Date.now()}`)
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 

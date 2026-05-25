@@ -62,7 +62,7 @@ const ApprovalCenter = () => {
 
     // Subscribe to profile changes for this org
     const subscription = supabase
-      .channel('approval-updates')
+      .channel(`approval-updates-${Date.now()}`)
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
