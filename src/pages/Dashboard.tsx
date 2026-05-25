@@ -159,11 +159,6 @@ const Dashboard = () => {
             <Text style={styles.greetingText}>
               {greeting}, Dr. {userName}
             </Text>
-            {orgName ? (
-              <Text style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 12, fontWeight: '600' }}>
-                {orgName}
-              </Text>
-            ) : null}
             <Text style={styles.statsSummary}>
               {stats.active} new cases · {stats.lab} lab requests pending
             </Text>
