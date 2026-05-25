@@ -45,12 +45,16 @@ const DoctorLogin = () => {
           // Reliable existence check via profiles table
           const { data: profile } = await supabase
             .from('profiles')
-            .select('id')
+            .select('role')
             .eq('email', trimmedEmail)
             .maybeSingle();
 
           if (profile) {
-            showAlert("Login Failed", "Incorrect email or password. Please try again.");
+            if (profile.role === 'organization') {
+              showAlert("Organization Account Detected", "This email is registered as an Organization. Please use the main portal.");
+            } else {
+              showAlert("Login Failed", "Incorrect email or password. Please try again.");
+            }
           } else {
             showAlert("Account Not Found", "This email is not registered. Please register to get access.");
           }
@@ -101,9 +105,10 @@ const DoctorLogin = () => {
           await supabase.from('profiles').update({ email: trimmedEmail }).eq('id', data.user.id);
         }
 
-        if (profile?.role !== 'doctor') {
+        if (profile?.role === 'organization') {
           await supabase.auth.signOut();
-          throw new Error("This login is for Doctors only. Organizations should use the main portal.");
+          showAlert("Organization Account Detected", "This portal is for Doctors only. Organizations must sign in using the main portal.");
+          return;
         }
 
         if (!data.user.email_confirmed_at) {

@@ -91,6 +91,11 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
+    fetchPendingCount();
+
+    // Poll every 100ms for near-continuous updates
+    const pollInterval = setInterval(fetchPendingCount, 100);
+
     const realtimeSub = supabase
       .channel(`app-layout-approvals-${Date.now()}`)
       .on('postgres_changes', { 
@@ -107,6 +112,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     return () => {
       supabase.removeChannel(realtimeSub);
       eventSub.remove();
+      clearInterval(pollInterval);
     };
   }, [role]);
 

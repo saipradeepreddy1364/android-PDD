@@ -74,12 +74,16 @@ const Login = () => {
           // Reliable existence check via profiles table
           const { data: profile } = await supabase
             .from('profiles')
-            .select('id')
+            .select('role')
             .eq('email', trimmedEmail)
             .maybeSingle();
 
           if (profile) {
-            showAlert("Login Failed", "Incorrect email or password. Please try again.");
+            if (profile.role === 'doctor') {
+              showAlert("Doctor Account Detected", "This email is registered as a Doctor. Please use the 'I am a Doctor' portal.");
+            } else {
+              showAlert("Login Failed", "Incorrect email or password. Please try again.");
+            }
           } else {
             showAlert("Account Not Found", "This email is not registered. Please register to get access.");
           }
@@ -128,19 +132,19 @@ const Login = () => {
           await supabase.from('profiles').update({ email: trimmedEmail }).eq('id', data.session.user.id);
         }
 
+        if (profile?.role === 'doctor') {
+          await supabase.auth.signOut();
+          showAlert("Doctor Account Detected", "This portal is for Organizations only. Doctors must sign in using the 'I am a Doctor' portal.");
+          return;
+        }
+
         if (profile?.role === 'organization' && !data.session.user.email_confirmed_at) {
           showAlert("Email Verification Required", "Please create your account again and verify your email to sign in.");
           await supabase.auth.signOut();
           return;
         }
 
-        if (profile?.role === 'doctor' && profile.status !== 'approved') {
-          showAlert("Approval Pending", "Your account is waiting for approval from your organization.");
-          await supabase.auth.signOut();
-          return;
-        }
-
-        navigation.replace(profile?.role === "organization" ? "OrgDashboard" : "Dashboard");
+        navigation.replace("OrgDashboard");
       }
     } catch (error: any) {
       showAlert("Login Error", error.message);

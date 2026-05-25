@@ -76,6 +76,9 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
     if (open) {
       fetchRecentChanges();
 
+      // Poll every 100ms while open for near-continuous updates
+      const pollInterval = setInterval(fetchRecentChanges, 100);
+
       // Subscribe to realtime changes while open
       const channel = supabase
         .channel('sidebar-realtime-' + Date.now())
@@ -86,10 +89,18 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
             fetchRecentChanges();
           }
         )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'profiles' },
+          () => {
+            fetchRecentChanges();
+          }
+        )
         .subscribe();
 
       return () => {
         supabase.removeChannel(channel);
+        clearInterval(pollInterval);
       };
     }
   }, [open]);
@@ -104,12 +115,8 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
 
   const handleNotificationPress = (n: Notification) => {
     if (n.id.startsWith("pending-")) {
-      // Don't navigate automatically anymore, let them use the buttons
-      // Or they can click the row to navigate if they want
-      onOpenChange(false); // Close sidebar first
-      setTimeout(() => {
-        navigation.navigate("ApprovalCenter");
-      }, 350);
+      // Do nothing, Approve/Reject are handled directly via the buttons
+      return;
     }
   };
 
