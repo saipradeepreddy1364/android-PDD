@@ -37,14 +37,18 @@ const Login = () => {
 
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, status')
           .eq('id', session.user.id)
           .single();
         
         if (profile?.role === 'organization') {
           navigation.navigate("OrgDashboard");
-        } else {
-          navigation.navigate("Dashboard");
+        } else if (profile?.role === 'doctor') {
+          if (profile.status === 'approved') {
+            navigation.navigate("Dashboard");
+          } else {
+            await supabase.auth.signOut();
+          }
         }
       }
     });
@@ -74,16 +78,12 @@ const Login = () => {
           // Reliable existence check via profiles table
           const { data: profile } = await supabase
             .from('profiles')
-            .select('role')
+            .select('id')
             .eq('email', trimmedEmail)
             .maybeSingle();
 
           if (profile) {
-            if (profile.role === 'doctor') {
-              showAlert("Doctor Account Detected", "This email is registered as a Doctor. Please use the 'I am a Doctor' portal.");
-            } else {
-              showAlert("Login Failed", "Incorrect email or password. Please try again.");
-            }
+            showAlert("Login Failed", "Incorrect email or password. Please try again.");
           } else {
             showAlert("Account Not Found", "This email is not registered. Please register to get access.");
           }
@@ -132,19 +132,32 @@ const Login = () => {
           await supabase.from('profiles').update({ email: trimmedEmail }).eq('id', data.session.user.id);
         }
 
+        if (!data.session.user.email_confirmed_at) {
+          showAlert("Email Verification Required", "Please verify your email to sign in.");
+          await supabase.auth.signOut();
+          return;
+        }
+
         if (profile?.role === 'doctor') {
-          await supabase.auth.signOut();
-          showAlert("Doctor Account Detected", "This portal is for Organizations only. Doctors must sign in using the 'I am a Doctor' portal.");
-          return;
+          if (profile.status === 'pending') {
+            await supabase.auth.signOut();
+            showAlert("Approval Pending", "Your account is waiting for approval from your organization. You'll be able to login once they approve.");
+            return;
+          }
+          if (profile.status === 'rejected') {
+            await supabase.auth.signOut();
+            showAlert("Access Denied", "Your application was rejected by the organization.");
+            return;
+          }
+          if (profile.status === 'blocked') {
+            await supabase.auth.signOut();
+            showAlert("Access Blocked", "Your account has been blocked by your organization.");
+            return;
+          }
+          navigation.replace("Dashboard");
+        } else {
+          navigation.replace("OrgDashboard");
         }
-
-        if (profile?.role === 'organization' && !data.session.user.email_confirmed_at) {
-          showAlert("Email Verification Required", "Please create your account again and verify your email to sign in.");
-          await supabase.auth.signOut();
-          return;
-        }
-
-        navigation.replace("OrgDashboard");
       }
     } catch (error: any) {
       showAlert("Login Error", error.message);
@@ -197,6 +210,20 @@ const Login = () => {
 
         setShowVerifyModal(false);
         const role = profile?.role || data.session.user.user_metadata?.role || "organization";
+        const status = profile?.status || data.session.user.user_metadata?.status || "pending";
+        
+        if (role === "doctor" && status !== "approved") {
+          await supabase.auth.signOut();
+          if (status === "pending") {
+            showAlert("Approval Pending", "Your account is waiting for approval from your organization. You'll be able to login once they approve.");
+          } else if (status === "rejected") {
+            showAlert("Access Denied", "Your application was rejected by the organization.");
+          } else if (status === "blocked") {
+            showAlert("Access Blocked", "Your account has been blocked by your organization.");
+          }
+          return;
+        }
+        
         navigation.replace(role === "organization" ? "OrgDashboard" : "Dashboard");
       }
     } catch (error: any) {
@@ -221,16 +248,16 @@ const Login = () => {
           </View>
 
           <View style={styles.header}>
-            <Text style={styles.title}>Organization Portal</Text>
-            <Text style={styles.subtitle}>Sign in to manage your clinic and view reports.</Text>
+            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.subtitle}>Sign in to access your dashboard and records.</Text>
           </View>
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Org Email</Text>
+              <Text style={styles.label}>Email Address</Text>
               <TextInput
                 style={styles.input}
-                placeholder="admin@cityclinic.com"
+                placeholder="name@example.com"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -276,16 +303,8 @@ const Login = () => {
               {loading ? (
                 <Loader2 size={18} color="#FFFFFF" />
               ) : (
-                <Text style={styles.buttonText}>Sign in as Org</Text>
+                <Text style={styles.buttonText}>Sign In</Text>
               )}
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.doctorLoginButton} 
-              onPress={() => navigation.navigate("DoctorLogin")}
-            >
-              <Stethoscope size={18} color="#0EA5E9" />
-              <Text style={styles.doctorLoginButtonText}>I am a Doctor</Text>
             </TouchableOpacity>
           </View>
 

@@ -12,7 +12,6 @@ import { NetworkGuard } from "@/components/NetworkGuard";
 import { AppDataProvider } from "@/lib/AppDataContext";
 import SplashScreen from "./pages/SplashScreen";
 import Login from "./pages/Login";
-import DoctorLogin from "./pages/DoctorLogin";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -68,7 +67,6 @@ const App = () => {
                 
                 {/* Public Routes */}
                 <Stack.Screen name="Login" component={Login} />
-                <Stack.Screen name="DoctorLogin" component={DoctorLogin} />
                 <Stack.Screen name="Signup" component={Signup} />
                 <Stack.Screen name="ForgotPassword" component={ForgotPassword} />
                 <Stack.Screen name="ResetPassword" component={ResetPassword} />
