@@ -52,6 +52,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const [role, setRole] = useState<string | null>(null);
   const [windowWidth, setWindowWidth] = useState(Dimensions.get("window").width);
   const insets = useSafeAreaInsets();
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
   
   useNotifications();
 
@@ -60,6 +61,46 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     const subscription = Dimensions.addEventListener("change", onChange);
     return () => subscription.remove();
   }, []);
+
+  useEffect(() => {
+    if (role !== "organization") {
+      setPendingApprovalsCount(0);
+      return;
+    }
+
+    const fetchPendingCount = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { count, error } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('org_id', user.id)
+        .eq('role', 'doctor')
+        .eq('status', 'pending');
+
+      if (!error && count !== null) {
+        setPendingApprovalsCount(count);
+      }
+    };
+
+    fetchPendingCount();
+
+    const subscription = supabase
+      .channel('app-layout-approvals')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'profiles'
+      }, () => {
+        fetchPendingCount();
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [role]);
 
   useEffect(() => {
     let authListener: any;
@@ -144,6 +185,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             <View style={styles.sidebarBottomRow}>
               <TouchableOpacity onPress={() => setIsNotificationsOpen(true)} style={styles.iconButton}>
                 <Bell size={20} color={isDark ? "#94A3B8" : "#64748B"} />
+                {role === "organization" && pendingApprovalsCount > 0 && (
+                  <View style={styles.orangeDot} />
+                )}
               </TouchableOpacity>
               <TouchableOpacity onPress={toggle} style={styles.iconButton}>
                 {isDark ? <Sun size={20} color="#94A3B8" /> : <Moon size={20} color="#64748B" />}
@@ -160,7 +204,12 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         {!isDesktop && (
           <View style={[styles.header, isDark && styles.headerDark, { paddingTop: insets.top }]}>
             <Text style={styles.brandText}>ClinLab</Text>
-            <TouchableOpacity onPress={() => setIsNotificationsOpen(true)}><Bell size={20} color={isDark ? "#FFF" : "#000"} /></TouchableOpacity>
+            <TouchableOpacity onPress={() => setIsNotificationsOpen(true)}>
+              <Bell size={20} color={isDark ? "#FFF" : "#000"} />
+              {role === "organization" && pendingApprovalsCount > 0 && (
+                <View style={styles.orangeDotMobileHeader} />
+              )}
+            </TouchableOpacity>
           </View>
         )}
         <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
@@ -245,6 +294,24 @@ const styles = StyleSheet.create({
   roleBadgeText: { fontSize: 10, fontWeight: "700", color: "#0369A1", textTransform: "uppercase" },
   iconButton: { padding: 8 },
   sidebarBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
+  orangeDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#F59E0B',
+  },
+  orangeDotMobileHeader: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#F59E0B',
+  },
 });
 
 export default AppLayout;

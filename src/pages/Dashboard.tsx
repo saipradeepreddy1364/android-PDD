@@ -180,23 +180,7 @@ const Dashboard = () => {
         </View>
 
         <View style={styles.mainContent}>
-            {/* Approval Alert for Organizations */}
-            {role === "organization" && pendingCount > 0 && (
-              <TouchableOpacity 
-                style={styles.approvalAlert}
-                onPress={() => navigation.navigate("ApprovalCenter")}
-              >
-                <View style={styles.alertIcon}>
-                  <AlertCircle size={20} color="#F59E0B" />
-                </View>
-                <View style={styles.alertBody}>
-                  <Text style={styles.alertTitle}>Pending Doctor Approvals</Text>
-                  <Text style={styles.alertText}>{pendingCount} doctors are waiting for your verification.</Text>
-                </View>
-                <ChevronRight size={18} color="#94A3B8" />
-              </TouchableOpacity>
-            )}
-
+            
             {/* Stats */}
             <View style={styles.statsGrid}>
               {[

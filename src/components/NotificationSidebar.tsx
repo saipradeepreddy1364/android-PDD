@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
-import { Bell, X, Info, AlertTriangle, CheckCircle2, Clock, Sparkles } from "lucide-react-native";
+import { Bell, Info, AlertTriangle, CheckCircle2 } from "lucide-react-native";
 import { SheetContent, SheetHeader, SheetTitle, SheetDescription } from "./ui/sheet";
 import { supabase } from "@/lib/supabase";
+import { useNavigation } from "@react-navigation/native";
+import { useTheme } from "./ThemeProvider";
 
 type Notification = {
   id: string;
@@ -15,6 +17,9 @@ type Notification = {
 
 export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const navigation = useNavigation<any>();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
 
   useEffect(() => {
     const fetchRecentChanges = async () => {
@@ -97,12 +102,19 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
     }
   };
 
+  const handleNotificationPress = (n: Notification) => {
+    onOpenChange(false); // Close sidebar
+    if (n.id.startsWith("pending-")) {
+      navigation.navigate("ApprovalCenter");
+    }
+  };
+
   return (
-    <SheetContent open={open} onOpenChange={onOpenChange} side="right" style={styles.sheetContent}>
-      <SheetHeader style={styles.header}>
+    <SheetContent open={open} onOpenChange={onOpenChange} side="right" style={[styles.sheetContent, isDark && styles.sheetContentDark]}>
+      <SheetHeader style={[styles.header, isDark && styles.headerDark]}>
         <View style={styles.titleRow}>
-          <Bell size={20} color="#0F172A" />
-          <SheetTitle style={styles.title}>Notifications</SheetTitle>
+          <Bell size={20} color={isDark ? "#FFF" : "#0F172A"} />
+          <SheetTitle style={[styles.title, isDark && styles.titleDark]}>Notifications</SheetTitle>
           <SheetDescription style={{ display: "none" }}>
             View your recent clinical updates and alerts.
           </SheetDescription>
@@ -115,23 +127,35 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
       <ScrollView style={styles.list} showsVerticalScrollIndicator={false} contentContainerStyle={notifications.length === 0 && { flex: 1 }}>
         {notifications.length > 0 ? (
           notifications.map((n) => (
-            <View key={n.id} style={[styles.notificationItem, !n.read && styles.unreadItem]}>
+            <TouchableOpacity 
+              key={n.id} 
+              onPress={() => handleNotificationPress(n)}
+              style={[
+                styles.notificationItem, 
+                !n.read && (isDark ? styles.unreadItemDark : styles.unreadItem),
+                isDark && styles.notificationItemDark
+              ]}
+              activeOpacity={0.7}
+            >
               <View style={[styles.iconContainer, (styles as any)[`${n.type}Icon`]]}>
                 {getIcon(n.type)}
               </View>
               <View style={styles.content}>
                 <View style={styles.itemHeader}>
-                  <Text style={styles.itemTitle}>{n.title}</Text>
+                  <Text style={[styles.itemTitle, isDark && styles.itemTitleDark]}>{n.title}</Text>
                   <Text style={styles.time}>{n.time}</Text>
                 </View>
-                <Text style={styles.message} numberOfLines={2}>{n.message}</Text>
+                <Text style={[styles.message, isDark && styles.messageDark]} numberOfLines={2}>{n.message}</Text>
+                {n.id.startsWith("pending-") && (
+                  <Text style={styles.clickToApprove}>Click to open Approval Center</Text>
+                )}
               </View>
-            </View>
+            </TouchableOpacity>
           ))
         ) : (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>Welcome to ClinLab</Text>
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyTitle, isDark && styles.emptyTitleDark]}>Welcome to ClinLab</Text>
+            <Text style={[styles.emptyText, isDark && styles.emptyTextDark]}>
               Your realtime notification center is now active. You'll see clinical updates and case alerts here.
             </Text>
           </View>
@@ -145,6 +169,12 @@ const styles = StyleSheet.create({
   sheetContent: {
     padding: 0,
     width: "85%",
+    backgroundColor: "#FFFFFF",
+  },
+  sheetContentDark: {
+    backgroundColor: "#0F172A",
+    borderLeftWidth: 1,
+    borderLeftColor: "#1E293B",
   },
   header: {
     flexDirection: "row",
@@ -156,6 +186,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
+  headerDark: {
+    borderBottomColor: "#1E293B",
+  },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -164,6 +197,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "700",
+    color: "#0F172A",
+  },
+  titleDark: {
+    color: "#FFFFFF",
   },
   clearAll: {
     fontSize: 12,
@@ -180,8 +217,14 @@ const styles = StyleSheet.create({
     borderBottomColor: "#F1F5F9",
     gap: 12,
   },
+  notificationItemDark: {
+    borderBottomColor: "#1E293B",
+  },
   unreadItem: {
     backgroundColor: "rgba(14, 165, 233, 0.02)",
+  },
+  unreadItemDark: {
+    backgroundColor: "rgba(14, 165, 233, 0.05)",
   },
   iconContainer: {
     width: 40,
@@ -213,6 +256,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#0F172A",
   },
+  itemTitleDark: {
+    color: "#FFFFFF",
+  },
   time: {
     fontSize: 10,
     color: "#94A3B8",
@@ -222,6 +268,15 @@ const styles = StyleSheet.create({
     color: "#64748B",
     lineHeight: 18,
   },
+  messageDark: {
+    color: "#94A3B8",
+  },
+  clickToApprove: {
+    fontSize: 11,
+    color: "#0EA5E9",
+    fontWeight: "600",
+    marginTop: 4,
+  },
   emptyState: {
     padding: 40,
     alignItems: "center",
@@ -229,23 +284,21 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 60,
   },
-  emptyIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#F8FAFC",
-    alignItems: "center",
-    justifyContent: "center",
-  },
   emptyTitle: {
     fontSize: 16,
     fontWeight: "600",
     color: "#0F172A",
+  },
+  emptyTitleDark: {
+    color: "#FFFFFF",
   },
   emptyText: {
     fontSize: 13,
     color: "#64748B",
     textAlign: "center",
     lineHeight: 20,
+  },
+  emptyTextDark: {
+    color: "#94A3B8",
   },
 });

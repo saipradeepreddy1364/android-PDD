@@ -198,24 +198,6 @@ const OrgDashboard = () => {
           <Text style={styles.subtext}>Monitor activity across all {doctors.length} departments.</Text>
         </View>
         
-        {/* Pending Approval Alert (Only shows if there are requests) */}
-        {pendingCount > 0 && (
-          <TouchableOpacity 
-            style={styles.approvalAlert}
-            onPress={() => navigation.navigate("ApprovalCenter")}
-          >
-            <View style={styles.alertIconBox}>
-              <Users size={20} color="#FFFFFF" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.alertTitle}>Doctor Approval Required</Text>
-              <Text style={styles.alertSubtitle}>
-                {pendingCount} {pendingCount === 1 ? 'doctor is' : 'doctors are'} waiting for your access approval.
-              </Text>
-            </View>
-            <ChevronRight size={18} color="#0EA5E9" />
-          </TouchableOpacity>
-        )}
 
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
