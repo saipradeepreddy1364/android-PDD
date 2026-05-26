@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, SafeAreaView, Keyb
 import { useNavigation } from "@react-navigation/native";
 import { Stethoscope, ArrowLeft, ShieldCheck, Mail, KeyRound, Lock } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
-import GradientBackground from "@/components/GradientBackground";
 
 const showAlert = (title: string, message: string, actions?: any[]) => {
   if (Platform.OS === 'web') {
@@ -46,7 +45,6 @@ const ForgotPassword = () => {
   };
 
   return (
-    <GradientBackground>
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardView}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -107,16 +105,15 @@ const ForgotPassword = () => {
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
-    </GradientBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "transparent" },
+  container: { flex: 1, backgroundColor: "#FFFFFF" },
   keyboardView: { flex: 1 },
   backButton: { flexDirection: "row", alignItems: "center", padding: 20, gap: 8 },
   backText: { fontSize: 14, color: "#64748B", fontWeight: "500" },
-  content: { flex: 1, padding: 24, justifyContent: "center", ...(Platform.OS === 'web' ? { maxWidth: 480, width: '100%', alignSelf: 'center', backgroundColor: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRadius: 28, marginVertical: 24, paddingVertical: 40, paddingHorizontal: 32, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.6)' } : {}) as any },
+  content: { flex: 1, padding: 24, justifyContent: "center" },
   header: { marginBottom: 32, alignItems: 'center' },
   iconBox: { width: 56, height: 56, borderRadius: 16, backgroundColor: "#F0F9FF", alignItems: "center", justifyContent: "center", marginBottom: 16 },
   title: { fontSize: 24, fontWeight: "700", color: "#0F172A", textAlign: 'center' },

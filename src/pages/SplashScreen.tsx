@@ -2,7 +2,6 @@ import React, { useEffect } from "react";
 import { View, StyleSheet, Image, Platform } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { supabase } from "@/lib/supabase";
-import GradientBackground from "@/components/GradientBackground";
 import { useAppData } from "@/lib/AppDataContext";
 
 const SplashScreen = () => {
@@ -113,24 +112,22 @@ const SplashScreen = () => {
   }, [navigation]);
 
   return (
-    <GradientBackground>
-      <View style={styles.container}>
-        <View style={styles.logoWrapper}>
-          <Image 
-            source={{ uri: Platform.OS === 'web' ? "/pwa-512x512.png" : "https://clinlab-ai-assist.vercel.app/pwa-512x512.png" }} 
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
+    <View style={styles.container}>
+      <View style={styles.logoWrapper}>
+        <Image 
+          source={{ uri: Platform.OS === 'web' ? "/pwa-512x512.png" : "https://clinlab-ai-assist.vercel.app/pwa-512x512.png" }} 
+          style={styles.logo}
+          resizeMode="contain"
+        />
       </View>
-    </GradientBackground>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "transparent",
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
     padding: 20,

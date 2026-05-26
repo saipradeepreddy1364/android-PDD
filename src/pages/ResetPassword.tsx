@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, SafeAreaView, Keyb
 import { useNavigation } from "@react-navigation/native";
 import { ShieldCheck, Lock, ArrowLeft, CheckCircle2, Eye, EyeOff } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
-import GradientBackground from "@/components/GradientBackground";
 
 const showAlert = (title: string, message: string, actions?: any[]) => {
   if (Platform.OS === 'web') {
@@ -93,13 +92,11 @@ const ResetPassword = () => {
       const { error } = await supabase.auth.updateUser({ password });
 
       if (error) throw error;
-      
-      // Sign out the user to ensure they are not automatically logged in after password reset
-      await supabase.auth.signOut();
-      // Directly navigate to Login page so user can test the new password
-      navigation.navigate('Login');
-      // Optionally show a brief alert confirming success
-      showAlert('Success', 'Your password has been reset. Please log in with your new password.', []);
+
+      setSuccess(true);
+      showAlert("Success", "Your password has been reset successfully.", [
+        { text: "Go to Login", onPress: () => navigation.navigate("Login") }
+      ]);
     } catch (error: any) {
       showAlert("Reset Failed", error.message);
     } finally {
@@ -117,7 +114,6 @@ const ResetPassword = () => {
   }
 
   return (
-    <GradientBackground>
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardView}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate("Login")}>
@@ -200,18 +196,17 @@ const ResetPassword = () => {
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
-    </GradientBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "transparent" },
+  container: { flex: 1, backgroundColor: "#FFFFFF" },
   keyboardView: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' },
   loadingText: { marginTop: 16, color: '#64748B', fontSize: 14 },
   backButton: { flexDirection: "row", alignItems: "center", padding: 20, gap: 8 },
   backText: { fontSize: 14, color: "#64748B", fontWeight: "500" },
-  content: { flex: 1, padding: 24, justifyContent: "center", ...(Platform.OS === 'web' ? { maxWidth: 480, width: '100%', alignSelf: 'center', backgroundColor: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRadius: 28, marginVertical: 24, paddingVertical: 40, paddingHorizontal: 32, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.6)' } : {}) as any },
+  content: { flex: 1, padding: 24, justifyContent: "center" },
   header: { marginBottom: 32, alignItems: 'center' },
   iconBox: { width: 64, height: 64, borderRadius: 20, backgroundColor: "#F0F9FF", alignItems: "center", justifyContent: "center", marginBottom: 20 },
   successIconBox: { backgroundColor: "#ECFDF5" },

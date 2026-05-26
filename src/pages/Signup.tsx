@@ -4,7 +4,6 @@ import { useNavigation } from "@react-navigation/native";
 import { Stethoscope, Loader2, ChevronDown, Search, Eye, EyeOff } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import GradientBackground from "@/components/GradientBackground";
 
 const showAlert = (title: string, message: string, actions?: any[]) => {
   if (Platform.OS === 'web') {
@@ -464,7 +463,6 @@ const Signup = () => {
   };
 
   return (
-    <GradientBackground>
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -861,14 +859,13 @@ const Signup = () => {
       </Modal>
     </KeyboardAvoidingView>
   </SafeAreaView>
-  </GradientBackground>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "transparent",
+    backgroundColor: "#FFFFFF",
   },
   scrollView: {
     flex: 1,
@@ -880,17 +877,6 @@ const styles = StyleSheet.create({
     paddingBottom: 250, // Massive space to ensure button is reachable
     gap: 16,
     flexGrow: 1,
-          ...(Platform.OS === 'web' ? {
-        maxWidth: '100%',
-        width: '100%',
-        alignSelf: 'center',
-        backgroundColor: 'transparent',
-        borderRadius: 0,
-        marginVertical: 0,
-        paddingVertical: 0,
-        paddingHorizontal: 0,
-        borderWidth: 0,
-      } : {}) as any,
   },
   brand: {
     flexDirection: "row",
