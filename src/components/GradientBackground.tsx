@@ -19,14 +19,14 @@ const GradientBackground = ({ children }: { children: React.ReactNode }) => {
             right: 0,
             bottom: 0,
             background: `
-              radial-gradient(ellipse 80% 60% at 0% 0%, rgba(56, 189, 248, 0.04) 0%, transparent 70%),
-              radial-gradient(ellipse 60% 80% at 100% 0%, rgba(125, 211, 252, 0.03) 0%, transparent 60%),
-              radial-gradient(ellipse 70% 50% at 100% 100%, rgba(251, 191, 36, 0.025) 0%, transparent 70%),
-              radial-gradient(ellipse 50% 60% at 0% 100%, rgba(253, 224, 71, 0.015) 0%, transparent 60%),
-              radial-gradient(ellipse 40% 40% at 50% 50%, rgba(147, 197, 253, 0.01) 0%, transparent 50%),
-              radial-gradient(ellipse 90% 40% at 30% 20%, rgba(167, 243, 208, 0.015) 0%, transparent 60%),
-              radial-gradient(ellipse 60% 30% at 70% 80%, rgba(254, 215, 170, 0.02) 0%, transparent 55%),
-              linear-gradient(135deg, #0A0A0A 0%, #050505 100%)
+              radial-gradient(ellipse 80% 60% at 0% 0%, rgba(0, 0, 0, 0.02) 0%, transparent 70%),
+              radial-gradient(ellipse 60% 80% at 100% 0%, rgba(0, 0, 0, 0.015) 0%, transparent 60%),
+              radial-gradient(ellipse 70% 50% at 100% 100%, rgba(0, 0, 0, 0.018) 0%, transparent 70%),
+              radial-gradient(ellipse 50% 60% at 0% 100%, rgba(0, 0, 0, 0.012) 0%, transparent 60%),
+              radial-gradient(ellipse 40% 40% at 50% 50%, rgba(0, 0, 0, 0.008) 0%, transparent 50%),
+              radial-gradient(ellipse 90% 40% at 30% 20%, rgba(0, 0, 0, 0.01) 0%, transparent 60%),
+              radial-gradient(ellipse 60% 30% at 70% 80%, rgba(0, 0, 0, 0.015) 0%, transparent 55%),
+              linear-gradient(135deg, #111111 0%, #111111 85%, #FFFFFF 95%, #111111 100%)
             `,
             zIndex: 0,
           }}
