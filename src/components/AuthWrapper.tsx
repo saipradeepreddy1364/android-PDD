@@ -16,7 +16,7 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
     const checkAuth = async () => {
       // Capture the URL synchronously BEFORE Supabase has a chance to strip the hash
       const isRecovery = Platform.OS === 'web' && typeof window !== 'undefined' && 
-        (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery') || window.location.pathname.includes('reset-password'));
+        (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery') || window.location.pathname.includes('reset-password') || window.location.hash.includes('access_token'));
 
       const { data: { session } } = await supabase.auth.getSession();
       

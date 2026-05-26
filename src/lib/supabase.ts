@@ -1,6 +1,7 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 // Support both Vite (web) and Expo (mobile) environment variable formats
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 
@@ -20,6 +21,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    // Must be true on web so Supabase can parse the recovery access_token from the URL hash
+    detectSessionInUrl: Platform.OS === 'web',
   },
 });

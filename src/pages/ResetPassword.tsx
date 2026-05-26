@@ -29,27 +29,52 @@ const ResetPassword = () => {
   const isPasswordValid = password.length >= 6;
 
   useEffect(() => {
-    const checkSession = async () => {
-      // For web, the hash contains the recovery token which Supabase JS automatically consumes
-      // to establish a session. We just check if a session exists and if we're in a recovery flow.
+    let mounted = true;
+
+    const setupRecoverySession = async () => {
+      // First, check if we already have a session (e.g., Supabase already parsed the hash)
       const { data: { session } } = await supabase.auth.getSession();
-      
-      // On web, Supabase handles the hash fragment automatically. 
-      // If we have a session, we are likely in the recovery flow if the URL has type=recovery
-      const isRecovery = Platform.OS === 'web' && (window.location.hash.includes('type=recovery') || window.location.href.includes('type=recovery'));
-      
-      if (session) {
+      if (session && mounted) {
         setIsValidSession(true);
-      } else if (!isRecovery) {
-        // If no session and no recovery hash, this page is invalid
-        showAlert("Invalid Link", "This password reset link is invalid or has expired.", [
-          { text: "Go to Login", onPress: () => navigation.navigate("Login") }
-        ]);
+        setChecking(false);
+        return;
       }
-      setChecking(false);
+
+      // Listen for the PASSWORD_RECOVERY event from Supabase's onAuthStateChange.
+      // This fires after Supabase parses the #access_token hash from the reset URL.
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (!mounted) return;
+        if (event === 'PASSWORD_RECOVERY' && session) {
+          setIsValidSession(true);
+          setChecking(false);
+        } else if (event === 'SIGNED_IN' && session) {
+          // Some Supabase versions fire SIGNED_IN instead of PASSWORD_RECOVERY
+          setIsValidSession(true);
+          setChecking(false);
+        }
+      });
+
+      // Timeout: if no auth event fires within 5 seconds, the link is invalid/expired
+      const timeout = setTimeout(() => {
+        if (mounted && !isValidSession) {
+          setChecking(false);
+          showAlert("Invalid Link", "This password reset link is invalid or has expired.", [
+            { text: "Go to Login", onPress: () => navigation.navigate("Login") }
+          ]);
+        }
+      }, 5000);
+
+      return () => {
+        subscription.unsubscribe();
+        clearTimeout(timeout);
+      };
     };
 
-    checkSession();
+    setupRecoverySession();
+
+    return () => {
+      mounted = false;
+    };
   }, [navigation]);
 
   const handleResetPassword = async () => {
