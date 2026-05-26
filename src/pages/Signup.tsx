@@ -721,10 +721,7 @@ const Signup = () => {
               />
             </View>
 
-            <View style={styles.diagBox}>
-              <Text style={styles.diagText}>Database Status: {organizations.length > 0 ? "Connected" : "Searching..."}</Text>
-              <Text style={styles.diagText}>Matches Found: {organizations.filter(o => o.full_name?.toLowerCase().includes(searchQuery.toLowerCase())).length}</Text>
-            </View>
+
             <TouchableOpacity 
               style={styles.refreshBtn} 
               onPress={() => {
