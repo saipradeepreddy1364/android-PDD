@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   // Full-screen style for web background container
   fullScreen: {
     flex: 1,
-    position: "fixed",
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
