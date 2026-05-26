@@ -19,14 +19,14 @@ const GradientBackground = ({ children }: { children: React.ReactNode }) => {
             right: 0,
             bottom: 0,
             background: `
-              radial-gradient(ellipse 80% 60% at 0% 0%, rgba(56, 189, 248, 0.05) 0%, transparent 70%),
-              radial-gradient(ellipse 60% 80% at 100% 0%, rgba(125, 211, 252, 0.04) 0%, transparent 60%),
-              radial-gradient(ellipse 70% 50% at 100% 100%, rgba(251, 191, 36, 0.03) 0%, transparent 70%),
-              radial-gradient(ellipse 50% 60% at 0% 100%, rgba(253, 224, 71, 0.02) 0%, transparent 60%),
-              radial-gradient(ellipse 40% 40% at 50% 50%, rgba(147, 197, 253, 0.015) 0%, transparent 50%),
-              radial-gradient(ellipse 90% 40% at 30% 20%, rgba(167, 243, 208, 0.02) 0%, transparent 60%),
-              radial-gradient(ellipse 60% 30% at 70% 80%, rgba(254, 215, 170, 0.03) 0%, transparent 55%),
-              linear-gradient(135deg, #FFFFFF 0%, #F0F9FF 30%, #FFFBEB 70%, #FFF7ED 100%)
+              radial-gradient(ellipse 80% 60% at 0% 0%, rgba(56, 189, 248, 0.04) 0%, transparent 70%),
+              radial-gradient(ellipse 60% 80% at 100% 0%, rgba(125, 211, 252, 0.03) 0%, transparent 60%),
+              radial-gradient(ellipse 70% 50% at 100% 100%, rgba(251, 191, 36, 0.025) 0%, transparent 70%),
+              radial-gradient(ellipse 50% 60% at 0% 100%, rgba(253, 224, 71, 0.015) 0%, transparent 60%),
+              radial-gradient(ellipse 40% 40% at 50% 50%, rgba(147, 197, 253, 0.01) 0%, transparent 50%),
+              radial-gradient(ellipse 90% 40% at 30% 20%, rgba(167, 243, 208, 0.015) 0%, transparent 60%),
+              radial-gradient(ellipse 60% 30% at 70% 80%, rgba(254, 215, 170, 0.02) 0%, transparent 55%),
+              linear-gradient(135deg, #0A0A0A 0%, #050505 100%)
             `,
             zIndex: 0,
           }}
@@ -115,7 +115,7 @@ const GradientBackground = ({ children }: { children: React.ReactNode }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0A0A0A",
+    backgroundColor: "#000000",
     position: "relative",
     overflow: "hidden",
   },
@@ -135,28 +135,28 @@ const styles = StyleSheet.create({
     left: -80,
     width: 320,
     height: 320,
-    backgroundColor: "rgba(56, 189, 248, 0.02)",
+    backgroundColor: "rgba(56, 189, 248, 0.008)",
   },
   blobTopRight: {
     top: -40,
     right: -60,
     width: 280,
     height: 280,
-    backgroundColor: "rgba(167, 243, 208, 0.02)",
+    backgroundColor: "rgba(167, 243, 208, 0.004)",
   },
   blobBottomRight: {
     bottom: -60,
     right: -40,
     width: 300,
     height: 300,
-    backgroundColor: "rgba(251, 191, 36, 0.015)",
+    backgroundColor: "rgba(251, 191, 36, 0.008)",
   },
   blobBottomLeft: {
     bottom: -80,
     left: -60,
     width: 260,
     height: 260,
-    backgroundColor: "rgba(253, 224, 71, 0.012)",
+    backgroundColor: "rgba(253, 224, 71, 0.003)",
   },
   blobCenter: {
     top: "35%",
