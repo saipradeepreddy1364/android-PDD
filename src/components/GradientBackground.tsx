@@ -9,7 +9,7 @@ import { View, StyleSheet, Platform, Dimensions } from "react-native";
 const GradientBackground = ({ children }: { children: React.ReactNode }) => {
   if (Platform.OS === "web") {
     return (
-      <View style={styles.container}>
+      <View style={styles.fullScreen}>
         {/* Web: Use CSS background with multiple radial gradients for a smooth organic look */}
         <div
           style={{
@@ -120,10 +120,24 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   content: {
+    // existing content style
     flex: 1,
     zIndex: 1,
     position: "relative",
   },
+  // Full-screen style for web background container
+  fullScreen: {
+    flex: 1,
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#000000",
+    overflow: "hidden",
+    zIndex: 0,
+  },
+
   // Native blob fallbacks
   blob: {
     position: "absolute",
