@@ -449,6 +449,12 @@ const Signup = () => {
     }
   };
 
+  useEffect(() => {
+    if (otp.trim().length === 6 && !loading) {
+      handleVerifyOtp();
+    }
+  }, [otp, loading]);
+
   const handleCancelSignup = async () => {
     // If user cancels during OTP, we clean up the unverified auth record immediately
     if (tempUserId) {

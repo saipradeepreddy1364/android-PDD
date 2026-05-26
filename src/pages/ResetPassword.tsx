@@ -93,6 +93,9 @@ const ResetPassword = () => {
 
       if (error) throw error;
 
+      // Force sign out so that they aren't logged in automatically, since updating the password updates their active session.
+      await supabase.auth.signOut();
+
       setSuccess(true);
       showAlert("Success", "Your password has been reset successfully.", [
         { text: "Go to Login", onPress: () => navigation.navigate("Login") }

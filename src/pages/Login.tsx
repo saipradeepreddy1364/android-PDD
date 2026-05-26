@@ -233,6 +233,12 @@ const Login = () => {
     }
   };
 
+  useEffect(() => {
+    if (otp.trim().length === 6 && !verifying) {
+      handleVerifyOtp();
+    }
+  }, [otp, verifying]);
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
