@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, SafeAreaView, Dimensions, KeyboardAvoidingView, Platform, Alert, Modal, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Stethoscope, Loader2, Eye, EyeOff } from "lucide-react-native";
@@ -233,8 +233,12 @@ const Login = () => {
     }
   };
 
+  const lastSubmittedOtpRef = useRef<string>("");
+
   useEffect(() => {
-    if (otp.trim().length === 6 && !verifying) {
+    const trimmedOtp = otp.trim();
+    if (trimmedOtp.length === 6 && !verifying && lastSubmittedOtpRef.current !== trimmedOtp) {
+      lastSubmittedOtpRef.current = trimmedOtp;
       handleVerifyOtp();
     }
   }, [otp, verifying]);

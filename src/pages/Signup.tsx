@@ -499,8 +499,12 @@ const Signup = () => {
     }
   };
 
+  const lastSubmittedOtpRef = useRef<string>("");
+
   useEffect(() => {
-    if (otp.trim().length === 6 && !loading) {
+    const trimmedOtp = otp.trim();
+    if (trimmedOtp.length === 6 && !loading && lastSubmittedOtpRef.current !== trimmedOtp) {
+      lastSubmittedOtpRef.current = trimmedOtp;
       handleVerifyOtp();
     }
   }, [otp, loading]);
