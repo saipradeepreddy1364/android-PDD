@@ -296,6 +296,7 @@ const Signup = () => {
     }
 
     try {
+      setLoading(true);
       // 1. Check for duplicate Organization name if signing up as organization
       if ((authType as string) === "organization") {
         const { data: existingOrg } = await supabase
@@ -307,6 +308,55 @@ const Signup = () => {
         
         if (existingOrg) {
           showAlert("Organization Exists", "An organization with this name is already registered. Please login or use a different name.");
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Check if a profile already exists for this email
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', trimmedEmail)
+        .maybeSingle();
+
+      if (existingProfile) {
+        if (existingProfile.status === 'unverified') {
+          // They have a past unverified attempt. We restore/update their details in profiles and resend the OTP.
+          const profileData = {
+            id: existingProfile.id,
+            full_name: formData.name,
+            phone: formData.phone,
+            role: authType as any,
+            status: "unverified",
+            specialization: authType === "doctor" ? formData.specialization : null,
+            org_id: authType === "doctor" ? formData.organization.id : null,
+            org_name: authType === "doctor" ? formData.organization.name : formData.name,
+            email: trimmedEmail,
+          };
+
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .upsert(profileData);
+
+          if (updateError) throw updateError;
+
+          // Resend the signup OTP to their email
+          const { error: resendError } = await supabase.auth.resend({
+            type: 'signup',
+            email: trimmedEmail,
+          });
+
+          if (resendError) throw resendError;
+
+          setTempUserId(existingProfile.id);
+          setVerifying(true);
+          setVerifyModalVisible(true);
+          showAlert("Code Sent", "We found your previous unverified registration. A new 6-digit code has been sent to your email.");
+          setLoading(false);
+          return;
+        } else {
+          showAlert("Account Exists", "This email is already registered and verified. Please use the Login page to sign in.");
           setLoading(false);
           return;
         }
