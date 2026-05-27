@@ -51,15 +51,14 @@ const PatientDetail = () => {
   const [uploading, setUploading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const navigation = useRef<any>(null);
-  
-  // Use React Navigation's useNavigation hook
+
   const nav = useNavigation<any>();
 
   const fetchFiles = async (doctorId: string, patientName: string) => {
     const { data: storageFiles } = await supabase.storage
       .from('clinical-files')
       .list(doctorId);
-    
+
     if (storageFiles) {
       const matchedFiles = storageFiles.filter(f => {
         const parts = f.name.split('--');
@@ -81,7 +80,7 @@ const PatientDetail = () => {
   React.useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
-      
+
       const { data: caseData } = await supabase
         .from('cases')
         .select('*')
@@ -90,8 +89,7 @@ const PatientDetail = () => {
 
       if (caseData) {
         setPatient(caseData);
-        
-        // Fetch files for this patient using the case's doctor_id
+
         if (caseData.doctor_id) {
           await fetchFiles(caseData.doctor_id, caseData.patient_name);
         }
@@ -126,7 +124,6 @@ const PatientDetail = () => {
 
   const handleFileUpload = async () => {
     if (Platform.OS === 'web') {
-      // Web: use a hidden HTML file input
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = '*/*';
@@ -179,7 +176,7 @@ const PatientDetail = () => {
         .eq('id', id);
 
       if (error) throw error;
-      
+
       setPatient({ ...patient, status: newStatus });
       alert(`Patient journey moved to: ${newStatus.replace('-', ' ')}`);
     } catch (error: any) {
@@ -201,6 +198,29 @@ const PatientDetail = () => {
       if (user) await fetchFiles(user.id, patient.patient_name);
     }
   };
+
+  // ── NEW: Delete the entire case ──────────────────────────────────────────
+  const handleDeleteCase = async () => {
+    if (Platform.OS === 'web') {
+      if (!window.confirm('Are you sure you want to permanently delete this case? This cannot be undone.')) return;
+    }
+    try {
+      setActionLoading(true);
+      const { error } = await supabase
+        .from('cases')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      alert('Case deleted successfully.');
+      nav.goBack();
+    } catch (error: any) {
+      alert('Failed to delete case: ' + error.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+  // ────────────────────────────────────────────────────────────────────────
 
   const handleDownloadFile = async (path: string, name: string) => {
     try {
@@ -294,7 +314,7 @@ const PatientDetail = () => {
           <Text style={styles.infoValue}>#{patient.tooth_number}</Text>
         </View>
       </View>
-      
+
       <View style={styles.infoSection}>
         <Text style={styles.infoLabel}>Chief Complaint</Text>
         <Text style={styles.infoValueText}>{patient.diagnosis || "No complaint recorded"}</Text>
@@ -341,9 +361,9 @@ const PatientDetail = () => {
         <ClipboardList size={16} color="#8B5CF6" />
         <Text style={styles.cardHeaderTitle}>Lab forms & uploads</Text>
       </View>
-      
-      <TouchableOpacity 
-        style={styles.uploadButton} 
+
+      <TouchableOpacity
+        style={styles.uploadButton}
         onPress={handleFileUpload}
         disabled={uploading}
       >
@@ -363,7 +383,7 @@ const PatientDetail = () => {
                   <Text style={styles.fileTagText}>{f.tag}</Text>
                 </View>
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.viewButton}
                 onPress={async () => {
                   const { data } = await supabase.storage
@@ -377,8 +397,8 @@ const PatientDetail = () => {
               >
                 <Eye size={18} color="#0EA5E9" />
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.downloadButton}
                 onPress={() => handleDownloadFile(f.path, f.name)}
               >
@@ -422,7 +442,7 @@ const PatientDetail = () => {
 
         <View style={styles.tabBar}>
           {["all info", "actions"].map((tab) => (
-            <TouchableOpacity 
+            <TouchableOpacity
               key={tab}
               onPress={() => setActiveTab(tab)}
               style={[styles.tabButton, activeTab === tab && styles.tabButtonActive]}
@@ -448,9 +468,9 @@ const PatientDetail = () => {
             <View style={styles.card}>
               <Text style={styles.cardHeaderTitle}>Action Center</Text>
               <Text style={styles.actionDesc}>Manage patient treatment lifecycle</Text>
-              
+
               <View style={styles.actionGrid}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.actionBtn, patient.status === 'lab-pending' && styles.actionBtnActive]}
                   onPress={() => nav.navigate("LabRequisition", { caseId: patient.id })}
                 >
@@ -458,12 +478,26 @@ const PatientDetail = () => {
                   <Text style={[styles.actionBtnLabel, patient.status === 'lab-pending' && styles.actionBtnLabelActive]}>Request Lab</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.actionBtn, patient.status === 'completed' && styles.actionBtnActive]}
                   onPress={() => handleStatusUpdate('completed')}
                 >
                   <CheckCircle2 size={20} color={patient.status === 'completed' ? "#FFFFFF" : "#22C55E"} />
                   <Text style={[styles.actionBtnLabel, patient.status === 'completed' && styles.actionBtnLabelActive]}>Complete</Text>
+                </TouchableOpacity>
+
+                {/* ── Delete Case Button ── */}
+                <TouchableOpacity
+                  style={[styles.actionBtn, { borderColor: '#FCA5A5', backgroundColor: '#FEF2F2' }]}
+                  onPress={handleDeleteCase}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? (
+                    <ActivityIndicator size="small" color="#EF4444" />
+                  ) : (
+                    <Trash2 size={20} color="#EF4444" />
+                  )}
+                  <Text style={[styles.actionBtnLabel, { color: '#EF4444' }]}>Delete Case</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -786,9 +820,11 @@ const styles = StyleSheet.create({
   actionGrid: {
     flexDirection: "row",
     gap: 12,
+    flexWrap: "wrap",
   },
   actionBtn: {
     flex: 1,
+    minWidth: 80,
     alignItems: "center",
     justifyContent: "center",
     padding: 12,
