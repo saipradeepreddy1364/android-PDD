@@ -18,6 +18,7 @@ const Insights = () => {
     total: 0,
     active: 0,
     completed: 0,
+    urgent: 0
   });
 
   React.useEffect(() => {
@@ -33,7 +34,7 @@ const Insights = () => {
 
       const role = profile?.role || 'doctor';
 
-      let query = supabase.from('cases').select('status');
+      let query = supabase.from('cases').select('status, is_urgent');
       if (role === 'organization') {
         query = query.eq('org_id', user.id);
       } else {
@@ -47,6 +48,7 @@ const Insights = () => {
           total: data.length,
           active: data.filter(c => c.status === 'active' || c.status === 'in-progress').length,
           completed: data.filter(c => c.status === 'completed').length,
+          urgent: data.filter(c => c.is_urgent).length
         });
       }
       setLoading(false);
@@ -59,6 +61,7 @@ const Insights = () => {
     { label: "Total Cases", value: metrics.total.toString(), icon: Activity, color: "#0EA5E9" },
     { label: "Active Cases", value: metrics.active.toString(), icon: Clock, color: "#8B5CF6" },
     { label: "Completed Cases", value: metrics.completed.toString(), icon: Target, color: "#10B981" },
+    { label: "Urgent Cases", value: metrics.urgent.toString(), icon: Sparkles, color: "#EF4444" },
   ];
 
   return (
