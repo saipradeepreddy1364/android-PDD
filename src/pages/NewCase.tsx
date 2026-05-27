@@ -25,9 +25,9 @@ const NewCase = () => {
     tooth_number: "",
     chief_complaint: "",
     notes: "",
-    case_type: "new-checkup", // Changed default to something specific
+    case_type: "new-checkup",
   });
-  
+
   React.useEffect(() => {
     const checkAccess = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -37,7 +37,7 @@ const NewCase = () => {
           .select('role')
           .eq('id', user.id)
           .single();
-        
+
         if (profile?.role === 'organization') {
           navigation.navigate("OrgDashboard");
         }
@@ -60,30 +60,30 @@ const NewCase = () => {
         return;
       }
 
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('full_name, org_id')
-          .eq('id', user.id)
-          .single();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, org_id')
+        .eq('id', user.id)
+        .single();
 
-        const { error } = await supabase.from('cases').insert([
-          {
-            patient_name: formData.patient_name,
-            // age: parseInt(formData.age) || 0,     // ADD COLUMN: ALTER TABLE cases ADD COLUMN age INTEGER;
-            // gender: formData.gender,               // ADD COLUMN: ALTER TABLE cases ADD COLUMN gender TEXT;
-            // tooth_number: formData.tooth_number,   // ADD COLUMN: ALTER TABLE cases ADD COLUMN tooth_number TEXT;
-            // diagnosis: formData.chief_complaint,   // ADD COLUMN: ALTER TABLE cases ADD COLUMN diagnosis TEXT;
-            // notes: formData.notes,                 // ADD COLUMN: ALTER TABLE cases ADD COLUMN notes TEXT;
-            status: formData.case_type === "lab" ? "lab-pending" : formData.case_type === "new-checkup" ? "checkup-pending" : "in-progress",
-            // is_urgent: symptoms.includes("Pain") || symptoms.includes("Swelling"), // ADD COLUMN: ALTER TABLE cases ADD COLUMN is_urgent BOOLEAN DEFAULT false;
-            doctor_id: user.id,
-            // doctor_name: profile?.full_name || user.user_metadata.full_name, // ADD COLUMN: ALTER TABLE cases ADD COLUMN doctor_name TEXT;
-            // org_id: profile?.org_id,               // ADD COLUMN: ALTER TABLE cases ADD COLUMN org_id UUID;
-          },
-        ]);
+      const { error } = await supabase.from('cases').insert([
+        {
+          patient_name: formData.patient_name,
+          // age: parseInt(formData.age) || 0,     // ADD COLUMN: ALTER TABLE cases ADD COLUMN age INTEGER;
+          // gender: formData.gender,               // ADD COLUMN: ALTER TABLE cases ADD COLUMN gender TEXT;
+          tooth_number: formData.tooth_number,
+          // diagnosis: formData.chief_complaint,   // ADD COLUMN: ALTER TABLE cases ADD COLUMN diagnosis TEXT;
+          // notes: formData.notes,                 // ADD COLUMN: ALTER TABLE cases ADD COLUMN notes TEXT;
+          status: formData.case_type === "lab" ? "lab-pending" : formData.case_type === "new-checkup" ? "checkup-pending" : "in-progress",
+          // is_urgent: symptoms.includes("Pain") || symptoms.includes("Swelling"), // ADD COLUMN: ALTER TABLE cases ADD COLUMN is_urgent BOOLEAN DEFAULT false;
+          doctor_id: user.id,
+          // doctor_name: profile?.full_name || user.user_metadata.full_name, // ADD COLUMN: ALTER TABLE cases ADD COLUMN doctor_name TEXT;
+          // org_id: profile?.org_id,               // ADD COLUMN: ALTER TABLE cases ADD COLUMN org_id UUID;
+        },
+      ]);
 
       if (error) throw error;
-      navigation.navigate("Patients"); // Redirect to Patients list to see the new record
+      navigation.navigate("Patients");
     } catch (error: any) {
       console.error(error);
       alert("Error adding case: " + error.message);
@@ -146,7 +146,7 @@ const NewCase = () => {
               </View>
               <View style={styles.gridItem}>
                 <Text style={styles.label}>Gender</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => setGenderModalVisible(true)}
                   style={styles.selectTrigger}
                 >
@@ -215,8 +215,8 @@ const NewCase = () => {
 
           <View style={styles.buttonRow}>
 
-            <TouchableOpacity 
-              style={[styles.submitButton, loading && styles.buttonDisabled]} 
+            <TouchableOpacity
+              style={[styles.submitButton, loading && styles.buttonDisabled]}
               onPress={handleSubmit}
               disabled={loading}
             >
@@ -239,7 +239,7 @@ const NewCase = () => {
         animationType="fade"
         onRequestClose={() => setGenderModalVisible(false)}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setGenderModalVisible(false)}
