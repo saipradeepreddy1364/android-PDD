@@ -13,7 +13,9 @@ import {
   Loader2,
   AlertCircle,
   Upload,
-  Trash2
+  Trash2,
+  Printer,
+  Eye
 } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
@@ -200,6 +202,34 @@ const PatientDetail = () => {
     }
   };
 
+  const handleDownloadFile = async (path: string, name: string) => {
+    try {
+      const { data } = await supabase.storage
+        .from('clinical-files')
+        .createSignedUrl(path, 3600);
+      if (data?.signedUrl) {
+        if (Platform.OS === 'web') {
+          const response = await fetch(data.signedUrl);
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = name;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        } else {
+          import("react-native").then(({ Linking }) => {
+            Linking.openURL(data.signedUrl);
+          });
+        }
+      }
+    } catch (err: any) {
+      alert("Download failed: " + err.message);
+    }
+  };
+
   const renderTimeline = () => {
     const dynamicTimeline = getDynamicTimeline(patient);
     return (
@@ -334,21 +364,27 @@ const PatientDetail = () => {
                 </View>
               </View>
               <TouchableOpacity 
-                style={styles.downloadButton}
+                style={styles.viewButton}
                 onPress={async () => {
                   const { data } = await supabase.storage
                     .from('clinical-files')
                     .createSignedUrl(f.path, 3600);
                   if (data?.signedUrl) {
-                    import("react-native").then(({ Linking, Platform }) => {
-                      if (Platform.OS === 'web') window.open(data.signedUrl, '_blank');
-                      else Linking.openURL(data.signedUrl);
-                    });
+                    if (Platform.OS === 'web') window.open(data.signedUrl, '_blank');
+                    else import("react-native").then(({ Linking }) => Linking.openURL(data.signedUrl));
                   }
                 }}
               >
-                <Download size={18} color="#64748B" />
+                <Eye size={18} color="#0EA5E9" />
               </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.downloadButton}
+                onPress={() => handleDownloadFile(f.path, f.name)}
+              >
+                <Printer size={18} color="#10B981" />
+              </TouchableOpacity>
+
               <TouchableOpacity
                 style={styles.deleteButton}
                 onPress={() => handleDeleteFile(f.path)}
@@ -687,6 +723,9 @@ const styles = StyleSheet.create({
     color: "#64748B",
   },
   downloadButton: {
+    padding: 8,
+  },
+  viewButton: {
     padding: 8,
   },
   loadingContainer: {

@@ -20,7 +20,7 @@ const Signup = () => {
   const navigation = useNavigation<any>();
   const scrollRef = useRef<ScrollView>(null);
   const [loading, setLoading] = useState(false);
-  const [authType, setAuthType] = useState<"doctor" | "organization">("doctor");
+  const [authType, setAuthType] = useState<"doctor" | "organization" | "lab">("doctor");
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleModalVisible, setRoleModalVisible] = useState(false);
@@ -203,7 +203,7 @@ const Signup = () => {
 
   // Background auto-login polling if stuck on Signup modal
   useEffect(() => {
-    if (!pendingModalVisible || authType !== 'doctor') return;
+    if (!pendingModalVisible || (authType !== 'doctor' && authType !== 'lab')) return;
 
     const pollSignIn = setInterval(async () => {
       // Try to silently sign in
@@ -216,20 +216,24 @@ const Signup = () => {
         // Successful login, check profile
         const { data: profile } = await supabase
           .from('profiles')
-          .select('status')
+          .select('status, role')
           .eq('id', data.session.user.id)
           .single();
 
         if (profile?.status === 'approved') {
           clearInterval(pollSignIn);
           setPendingModalVisible(false);
-          navigation.replace("Dashboard");
+          if (profile.role === 'lab') {
+            navigation.replace("LabDashboard");
+          } else {
+            navigation.replace("Dashboard");
+          }
         }
       }
     }, 3000); // Check every 3 seconds
 
     return () => clearInterval(pollSignIn);
-  }, [pendingModalVisible, formData.email, formData.password]);
+  }, [pendingModalVisible, formData.email, formData.password, authType]);
 
   // Save draft whenever formData changes (except password)
   useEffect(() => {
@@ -295,6 +299,11 @@ const Signup = () => {
       return;
     }
 
+    if (authType === "lab" && !formData.organization.id) {
+      showAlert("Organization Required", "Please select your organization.");
+      return;
+    }
+
     try {
       setLoading(true);
       // 1. Check for duplicate Organization name if signing up as organization
@@ -330,8 +339,8 @@ const Signup = () => {
             role: authType as any,
             status: "unverified",
             specialization: authType === "doctor" ? formData.specialization : null,
-            org_id: authType === "doctor" ? formData.organization.id : null,
-            org_name: authType === "doctor" ? formData.organization.name : formData.name,
+            org_id: (authType === "doctor" || authType === "lab") ? formData.organization.id : null,
+            org_name: (authType === "doctor" || authType === "lab") ? formData.organization.name : formData.name,
             email: trimmedEmail,
           };
 
@@ -372,8 +381,8 @@ const Signup = () => {
             phone: formData.phone,
             role: authType,
             specialization: authType === "doctor" ? formData.specialization : null,
-            org_id: authType === "doctor" ? formData.organization.id : null,
-            org_name: authType === "doctor" ? formData.organization.name : formData.name,
+            org_id: (authType === "doctor" || authType === "lab") ? formData.organization.id : null,
+            org_name: (authType === "doctor" || authType === "lab") ? formData.organization.name : formData.name,
           }
         }
       });
@@ -422,8 +431,8 @@ const Signup = () => {
           role: authType as any,
           status: "unverified",
           specialization: authType === "doctor" ? formData.specialization : null,
-          org_id: authType === "doctor" ? formData.organization.id : null,
-          org_name: authType === "doctor" ? formData.organization.name : formData.name,
+          org_id: (authType === "doctor" || authType === "lab") ? formData.organization.id : null,
+          org_name: (authType === "doctor" || authType === "lab") ? formData.organization.name : formData.name,
           email: trimmedEmail,
         };
 
@@ -466,8 +475,8 @@ const Signup = () => {
           role: authType as any,
           status: (authType as string) === "organization" ? "approved" : "pending",
           specialization: authType === "doctor" ? formData.specialization : null,
-          org_id: authType === "doctor" ? formData.organization.id : null,
-          org_name: authType === "doctor" ? formData.organization.name : formData.name,
+          org_id: (authType === "doctor" || authType === "lab") ? formData.organization.id : null,
+          org_name: (authType === "doctor" || authType === "lab") ? formData.organization.name : formData.name,
           email: formData.email.trim().toLowerCase(),
         };
 
@@ -482,8 +491,8 @@ const Signup = () => {
 
         setVerifyModalVisible(false);
 
-        if ((authType as string) === "doctor") {
-          // Redirect Doctors to the waiting screen
+        if ((authType as string) === "doctor" || (authType as string) === "lab") {
+          // Redirect Doctors and Labs to the waiting screen
           setPendingModalVisible(true);
         } else {
           // Redirect Organizations to dashboard
@@ -548,6 +557,12 @@ const Signup = () => {
             onPress={() => setAuthType("doctor")}
           >
             <Text style={[styles.tabText, authType === "doctor" && styles.tabTextActive]}>Doctor</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tab, authType === "lab" && styles.tabActive]}
+            onPress={() => setAuthType("lab")}
+          >
+            <Text style={[styles.tabText, authType === "lab" && styles.tabTextActive]}>Lab</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.tab, (authType as string) === "organization" && styles.tabActive]}
@@ -683,31 +698,31 @@ const Signup = () => {
           </View>
 
           {authType === "doctor" && (
-            <>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Specialization</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g. Orthodontist"
-                  value={formData.specialization}
-                  onChangeText={(v) => setFormData({ ...formData, specialization: v })}
-                  placeholderTextColor="#94A3B8"
-                />
-              </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Specialization</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. Orthodontist"
+                value={formData.specialization}
+                onChangeText={(v) => setFormData({ ...formData, specialization: v })}
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+          )}
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Select Organization</Text>
-                <TouchableOpacity 
-                  style={styles.pickerTrigger}
-                  onPress={() => setOrgModalVisible(true)}
-                >
-                  <Text style={styles.pickerValue} numberOfLines={2}>
-                    {formData.organization.name || "Choose Clinic/Hospital"}
-                  </Text>
-                  <ChevronDown size={18} color="#64748B" />
-                </TouchableOpacity>
-              </View>
-            </>
+          {(authType === "doctor" || authType === "lab") && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Select Organization</Text>
+              <TouchableOpacity 
+                style={styles.pickerTrigger}
+                onPress={() => setOrgModalVisible(true)}
+              >
+                <Text style={styles.pickerValue} numberOfLines={2}>
+                  {formData.organization.name || "Choose Clinic/Hospital"}
+                </Text>
+                <ChevronDown size={18} color="#64748B" />
+              </TouchableOpacity>
+            </View>
           )}
 
           {authType === "doctor" && (

@@ -23,7 +23,7 @@ const ApprovalCenter = () => {
         .from('profiles')
         .select('*')
         .eq('org_id', user.id)
-        .eq('role', 'doctor')
+        .in('role', ['doctor', 'lab'])
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -150,12 +150,32 @@ const ApprovalCenter = () => {
                       <Text style={styles.avatarText}>{doc.full_name?.charAt(0) || "D"}</Text>
                     </View>
                     <View style={styles.details}>
-                      <Text style={styles.doctorName}>{doc.full_name}</Text>
-                      
-                      <View style={styles.infoRow}>
-                        <Stethoscope size={12} color="#64748B" />
-                        <Text style={styles.infoText}>{doc.specialization || "General Dentist"}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <Text style={styles.doctorName}>{doc.full_name}</Text>
+                        <View style={{
+                          backgroundColor: doc.role === 'lab' ? '#EEF2FF' : '#F0F9FF',
+                          paddingHorizontal: 8,
+                          paddingVertical: 2,
+                          borderRadius: 6,
+                          borderWidth: 1,
+                          borderColor: doc.role === 'lab' ? '#818CF8' : '#38BDF8',
+                        }}>
+                          <Text style={{
+                            fontSize: 10,
+                            fontWeight: '600',
+                            color: doc.role === 'lab' ? '#4F46E5' : '#0284C7',
+                          }}>
+                            {doc.role === 'lab' ? '🔬 Lab' : '🩺 Doctor'}
+                          </Text>
+                        </View>
                       </View>
+                      
+                      {doc.role === 'doctor' && (
+                        <View style={styles.infoRow}>
+                          <Stethoscope size={12} color="#64748B" />
+                          <Text style={styles.infoText}>{doc.specialization || "General Dentist"}</Text>
+                        </View>
+                      )}
 
                       {doc.email && (
                         <View style={styles.infoRow}>

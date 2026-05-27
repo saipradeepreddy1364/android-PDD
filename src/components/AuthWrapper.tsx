@@ -172,8 +172,8 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
   // If not logged in, just show children (Login/Signup pages)
   if (!session) return <>{children}</>;
 
-  // If doctor and pending approval
-  if (profile?.role === 'doctor' && profile?.status === 'pending') {
+  // If doctor or lab and pending approval
+  if ((profile?.role === 'doctor' || profile?.role === 'lab') && profile?.status === 'pending') {
     return (
       <View style={styles.container}>
         <View style={styles.card}>

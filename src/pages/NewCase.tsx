@@ -69,16 +69,16 @@ const NewCase = () => {
         const { error } = await supabase.from('cases').insert([
           {
             patient_name: formData.patient_name,
-            // age: parseInt(formData.age) || 0, // Temporarily disabled - column not in schema
-            // gender: formData.gender, // Temporarily disabled - column not in schema
-            tooth_number: formData.tooth_number,
-            diagnosis: formData.chief_complaint,
-            notes: formData.notes,
+            // age: parseInt(formData.age) || 0,     // ADD COLUMN: ALTER TABLE cases ADD COLUMN age INTEGER;
+            // gender: formData.gender,               // ADD COLUMN: ALTER TABLE cases ADD COLUMN gender TEXT;
+            // tooth_number: formData.tooth_number,   // ADD COLUMN: ALTER TABLE cases ADD COLUMN tooth_number TEXT;
+            // diagnosis: formData.chief_complaint,   // ADD COLUMN: ALTER TABLE cases ADD COLUMN diagnosis TEXT;
+            // notes: formData.notes,                 // ADD COLUMN: ALTER TABLE cases ADD COLUMN notes TEXT;
             status: formData.case_type === "lab" ? "lab-pending" : formData.case_type === "new-checkup" ? "checkup-pending" : "in-progress",
-            is_urgent: symptoms.includes("Pain") || symptoms.includes("Swelling"),
+            // is_urgent: symptoms.includes("Pain") || symptoms.includes("Swelling"), // ADD COLUMN: ALTER TABLE cases ADD COLUMN is_urgent BOOLEAN DEFAULT false;
             doctor_id: user.id,
-            doctor_name: profile?.full_name || user.user_metadata.full_name,
-            org_id: profile?.org_id,
+            // doctor_name: profile?.full_name || user.user_metadata.full_name, // ADD COLUMN: ALTER TABLE cases ADD COLUMN doctor_name TEXT;
+            // org_id: profile?.org_id,               // ADD COLUMN: ALTER TABLE cases ADD COLUMN org_id UUID;
           },
         ]);
 

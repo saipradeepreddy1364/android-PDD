@@ -44,6 +44,11 @@ const orgTabs: Tab[] = [
   { name: "OrgReports", label: "Reports", icon: FileSearch },
 ];
 
+const labTabs: Tab[] = [
+  { name: "LabDashboard", label: "Dashboard", icon: LayoutDashboard },
+  { name: "LabInsights", label: "Insights", icon: BarChart3 },
+];
+
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { theme, toggle } = useTheme();
   const navigation = useNavigation<any>();
@@ -143,7 +148,11 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     return () => authListener?.subscription.unsubscribe();
   }, [navigation]);
 
-  const activeTabs = (!role || role === "loading") ? [] : (role === "organization" ? orgTabs : doctorTabs);
+  const activeTabs = (!role || role === "loading") 
+    ? [] 
+    : (role === "organization" 
+      ? orgTabs 
+      : (role === "lab" ? labTabs : doctorTabs));
   const isDesktop = windowWidth >= 768;
   const isDark = theme === "dark";
   const handleLogout = async () => { await supabase.auth.signOut(); navigation.reset({ index: 0, routes: [{ name: 'Login' }] }); };
@@ -200,8 +209,16 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             <View style={styles.navContainer}>{renderNav()}</View>
           </View>
           <View style={styles.sidebarBottom}>
-            <View style={[styles.roleBadge, role === "organization" ? styles.roleBadgeOrg : styles.roleBadgeDr]}>
-              <Text style={styles.roleBadgeText}>{role}</Text>
+            <View style={[
+              styles.roleBadge, 
+              role === "organization" 
+                ? styles.roleBadgeOrg 
+                : (role === "lab" ? styles.roleBadgeLab : styles.roleBadgeDr)
+            ]}>
+              <Text style={[
+                styles.roleBadgeText,
+                { color: role === "organization" ? "#64748B" : (role === "lab" ? "#4F46E5" : "#0369A1") }
+              ]}>{role}</Text>
             </View>
             <View style={styles.sidebarBottomRow}>
               <TouchableOpacity onPress={() => setIsNotificationsOpen(true)} style={styles.iconButton}>
@@ -320,6 +337,7 @@ const styles = StyleSheet.create({
   roleBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, alignSelf: 'flex-start' },
   roleBadgeOrg: { backgroundColor: "#F1F5F9" },
   roleBadgeDr: { backgroundColor: "#E0F2FE" },
+  roleBadgeLab: { backgroundColor: "#EEF2FF" },
   roleBadgeText: { fontSize: 10, fontWeight: "700", color: "#0369A1", textTransform: "uppercase" },
   iconButton: { padding: 8 },
   sidebarBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },

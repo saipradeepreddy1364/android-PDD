@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions, ActivityIndicator, Platform } from "react-native";
 import { Download, Printer, Send, ClipboardList } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
@@ -82,6 +82,165 @@ const LabRequisition = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePrint = (isPdf: boolean) => {
+    if (Platform.OS !== 'web') {
+      alert("Print/PDF is only supported on Web currently.");
+      return;
+    }
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Popup blocker prevented opening the print view.");
+      return;
+    }
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Lab Requisition - ${patientData.patient_name || 'Case'}</title>
+          <style>
+            body {
+              font-family: 'Inter', system-ui, -apple-system, sans-serif;
+              color: #0f172a;
+              padding: 40px;
+              line-height: 1.5;
+            }
+            .header {
+              border-bottom: 2px solid #e2e8f0;
+              padding-bottom: 20px;
+              margin-bottom: 30px;
+            }
+            .title {
+              font-size: 24px;
+              font-weight: 800;
+              color: #0ea5e9;
+              margin: 0;
+            }
+            .meta {
+              font-size: 14px;
+              color: #64748b;
+              margin-top: 5px;
+            }
+            .grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 20px;
+              margin-bottom: 30px;
+            }
+            .info-box {
+              background: #f8fafc;
+              border: 1px solid #f1f5f9;
+              padding: 15px;
+              border-radius: 12px;
+            }
+            .label {
+              font-size: 11px;
+              font-weight: 700;
+              color: #94a3b8;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .value {
+              font-size: 14px;
+              font-weight: 600;
+              color: #334155;
+              margin-top: 4px;
+            }
+            .section-title {
+              font-size: 14px;
+              font-weight: 700;
+              color: #475569;
+              margin-bottom: 10px;
+              border-bottom: 1px solid #e2e8f0;
+              padding-bottom: 5px;
+            }
+            .badges {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 8px;
+              margin-bottom: 20px;
+            }
+            .badge {
+              background: #e0f2fe;
+              color: #0369a1;
+              padding: 6px 12px;
+              border-radius: 20px;
+              font-size: 12px;
+              font-weight: 600;
+            }
+            .instructions {
+              background: #fffbeb;
+              border: 1px solid #fef3c7;
+              padding: 15px;
+              border-radius: 12px;
+              margin-top: 20px;
+              font-style: italic;
+            }
+            @media print {
+              body { padding: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1 class="title">LAB REQUISITION REPORT</h1>
+            <div class="meta">Case Reference: #${caseId ? caseId.slice(0, 8).toUpperCase() : 'NEW'}</div>
+          </div>
+
+          <div class="grid">
+            <div class="info-box">
+              <div class="label">Patient Name</div>
+              <div class="value">${patientData.patient_name || 'N/A'}</div>
+            </div>
+            <div class="info-box">
+              <div class="label">Age / Gender</div>
+              <div class="value">${patientData.age || 'N/A'} yrs &middot; ${patientData.gender || 'N/A'}</div>
+            </div>
+            <div class="info-box">
+              <div class="label">Dentist Name</div>
+              <div class="value">${dentistName}</div>
+            </div>
+            <div class="info-box">
+              <div class="label">Tooth FDI</div>
+              <div class="value">#${patientData.tooth_number || 'N/A'}</div>
+            </div>
+          </div>
+
+          <div class="section-title">Required Lab Work</div>
+          <div class="badges">
+            ${selected.map(item => `<span class="badge">${item.toUpperCase()}</span>`).join('')}
+          </div>
+
+          <div class="grid">
+            <div class="info-box">
+              <div class="label">Material</div>
+              <div class="value">${labDetails.material}</div>
+            </div>
+            <div class="info-box">
+              <div class="label">Shade / Margin</div>
+              <div class="value">${labDetails.shade} &middot; ${labDetails.margin}</div>
+            </div>
+          </div>
+
+          ${labDetails.instructions ? `
+            <div class="section-title">Special Instructions</div>
+            <div class="instructions">${labDetails.instructions}</div>
+          ` : ''}
+
+          <script>
+            window.onload = function() {
+              window.print();
+            }
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   return (
@@ -200,11 +359,11 @@ const LabRequisition = () => {
 
         <View style={styles.actions}>
           <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.secondaryButton}>
+            <TouchableOpacity style={styles.secondaryButton} onPress={() => handlePrint(true)}>
               <Download size={16} color="#0F172A" />
               <Text style={styles.secondaryButtonText}>PDF</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryButton}>
+            <TouchableOpacity style={styles.secondaryButton} onPress={() => handlePrint(false)}>
               <Printer size={16} color="#0F172A" />
               <Text style={styles.secondaryButtonText}>Print</Text>
             </TouchableOpacity>

@@ -27,6 +27,8 @@ import Patients from "./pages/Patients";
 import PatientDetail from "./pages/PatientDetail";
 import Insights from "./pages/Insights";
 import ApprovalCenter from "./pages/ApprovalCenter";
+import LabDashboard from "./pages/LabDashboard";
+import LabInsights from "./pages/LabInsights";
 import NotFound from "./pages/NotFound";
 
 import { useRealtimeNotifications } from "./lib/useRealtimeNotifications";
@@ -84,6 +86,8 @@ const App = () => {
                 <Stack.Screen name="PatientDetail" component={PatientDetail} />
                 <Stack.Screen name="Insights" component={Insights} />
                 <Stack.Screen name="ApprovalCenter" component={ApprovalCenter} />
+                <Stack.Screen name="LabDashboard" component={LabDashboard} />
+                <Stack.Screen name="LabInsights" component={LabInsights} />
                 <Stack.Screen name="NotFound" component={NotFound} />
               </Stack.Navigator>
             </NavigationContainer>

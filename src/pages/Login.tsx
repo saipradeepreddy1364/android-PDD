@@ -43,9 +43,9 @@ const Login = () => {
         
         if (profile?.role === 'organization') {
           navigation.navigate("OrgDashboard");
-        } else if (profile?.role === 'doctor') {
+        } else if (profile?.role === 'doctor' || profile?.role === 'lab') {
           if (profile.status === 'approved') {
-            navigation.navigate("Dashboard");
+            navigation.navigate(profile.role === 'lab' ? "LabDashboard" : "Dashboard");
           } else {
             await supabase.auth.signOut();
           }
@@ -138,7 +138,7 @@ const Login = () => {
           return;
         }
 
-        if (profile?.role === 'doctor') {
+        if (profile?.role === 'doctor' || profile?.role === 'lab') {
           if (profile.status === 'pending') {
             await supabase.auth.signOut();
             showAlert("Approval Pending", "Your account is waiting for approval from your organization. You'll be able to login once they approve.");
@@ -154,7 +154,7 @@ const Login = () => {
             showAlert("Access Blocked", "Your account has been blocked by your organization.");
             return;
           }
-          navigation.replace("Dashboard");
+          navigation.replace(profile.role === 'lab' ? "LabDashboard" : "Dashboard");
         } else {
           navigation.replace("OrgDashboard");
         }
@@ -212,7 +212,7 @@ const Login = () => {
         const role = profile?.role || data.session.user.user_metadata?.role || "organization";
         const status = profile?.status || data.session.user.user_metadata?.status || "pending";
         
-        if (role === "doctor" && status !== "approved") {
+        if ((role === "doctor" || role === "lab") && status !== "approved") {
           await supabase.auth.signOut();
           if (status === "pending") {
             showAlert("Approval Pending", "Your account is waiting for approval from your organization. You'll be able to login once they approve.");
@@ -224,7 +224,13 @@ const Login = () => {
           return;
         }
         
-        navigation.replace(role === "organization" ? "OrgDashboard" : "Dashboard");
+        if (role === "organization") {
+          navigation.replace("OrgDashboard");
+        } else if (role === "lab") {
+          navigation.replace("LabDashboard");
+        } else {
+          navigation.replace("Dashboard");
+        }
       }
     } catch (error: any) {
       showAlert("Verification Failed", error.message);
