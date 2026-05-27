@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions, Modal, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, ActivityIndicator } from "react-native";
 import {
   Sparkles,
   CheckCircle2,
@@ -14,9 +14,9 @@ import {
   FileText,
   ChevronDown,
   X,
-  FileSearch
+  FileSearch,
+  ListChecks,
 } from "lucide-react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 import { useVoiceInput } from "@/hooks/useVoice";
@@ -32,49 +32,19 @@ type Output = {
   alerts: string[];
 };
 
-const procedures: Record<string, Output> = {
-  "access cavity": {
-    diagnosis: "Irreversible Pulpitis — Tooth 36",
-    confidence: "High",
-    steps: [
-      "Locate all canals (MB, ML, DB, DL) under magnification",
-      "Establish glide path with #10 K-file to working length",
-      "Select initial rotary file (ProTaper SX → S1)",
-      "Begin irrigation protocol: 3% NaOCl, EDTA 17%, saline rinse",
-      "Determine working length with apex locator + IOPA confirmation",
-    ],
-    instruments: ["DG-16 endodontic explorer", "Endo-Z bur", "K-files #10–#25", "Rotary endomotor", "Apex locator"],
-    materials: ["3% Sodium Hypochlorite", "17% EDTA", "Saline", "Calcium hydroxide (intracanal)"],
-    alerts: ["Verify rubber dam isolation before irrigation.", "Avoid binding files past WL — risk of perforation."],
-  },
-  "crown prep": {
-    diagnosis: "Crown Preparation — Tooth 11",
-    confidence: "High",
-    steps: [
-      "Select appropriate diamond burs (tapered chamfer)",
-      "Reduce occlusal surface by 1.5mm - 2.0mm",
-      "Prepare axial walls with 6-degree taper",
-      "Refine gingival finish line (chamfer)",
-      "Take final impression using PVS material",
-    ],
-    instruments: ["High-speed handpiece", "Diamond burs", "Retraction cord", "Impression trays"],
-    materials: ["PVS impression material", "Retraction solution", "Temporary cement"],
-    alerts: ["Ensure adequate clearance for material thickness.", "Protect adjacent teeth with metal matrix."],
-  },
-  "extraction": {
-    diagnosis: "Non-restorable Caries — Tooth 46",
-    confidence: "High",
-    steps: [
-      "Administer local anesthesia (IANB + Long Buccal)",
-      "Sever periodontal ligament using periotome",
-      "Luxate tooth with straight elevator",
-      "Engage tooth with appropriate forceps (Lower molar)",
-      "Debride socket and verify hemostasis",
-    ],
-    instruments: ["Periotome", "Straight elevator", "Molar forceps", "Curette"],
-    materials: ["Local Anesthetic (Articaine 4%)", "Gauze", "Gelfoam (if needed)"],
-    alerts: ["Monitor patient vitals.", "Warn patient about post-op numbness."],
-  },
+type DatasetStep = {
+  id: string;
+  order: number;
+  name: string;
+  component: string;
+  cost: number;
+};
+
+type DatasetProcedure = {
+  id: string;
+  category: string;
+  work_type: string;
+  steps: DatasetStep[];
 };
 
 const confidenceColors: Record<Output["confidence"], string> = {
@@ -86,7 +56,6 @@ const confidenceColors: Record<Output["confidence"], string> = {
 const AIEngine = () => {
   const [input, setInput] = useState("");
   const [symptoms, setSymptoms] = useState("");
-  const [stage, setStage] = useState("");
   const [output, setOutput] = useState<Output | null>(null);
   const [loading, setLoading] = useState(false);
   const [originalText, setOriginalText] = useState("");
@@ -96,15 +65,15 @@ const AIEngine = () => {
   const [fileAnalysis, setFileAnalysis] = useState<string | null>(null);
   const [fetchingFile, setFetchingFile] = useState(false);
 
-  const [selectedProcedure, setSelectedProcedure] = useState<any>(null);
-  const [selectedStep, setSelectedStep] = useState<any>(null);
+  const [selectedProcedure, setSelectedProcedure] = useState<DatasetProcedure | null>(null);
+  const [selectedStep, setSelectedStep] = useState<DatasetStep | null>(null);
   const [showProcPicker, setShowProcPicker] = useState(false);
   const [showStepPicker, setShowStepPicker] = useState(false);
-  const [recommendations, setRecommendations] = useState<RecommendedStep[]>([]);
-  const [recLoading, setRecLoading] = useState(false);
 
-  // Load the dataset directly for the pickers
-  // diasDataset is now imported at the top
+  // Dataset next steps state (separate from AI)
+  const [datasetSteps, setDatasetSteps] = useState<RecommendedStep[]>([]);
+  const [datasetLoading, setDatasetLoading] = useState(false);
+  const [datasetSearched, setDatasetSearched] = useState(false);
 
   useEffect(() => {
     const fetchCases = async () => {
@@ -120,36 +89,19 @@ const AIEngine = () => {
     fetchCases();
   }, []);
 
-  // Update recommendations when selection changes
+  // Reset dataset results when procedure/step changes
   useEffect(() => {
-    const updateRecs = async () => {
-      if (selectedProcedure && selectedStep) {
-        setRecLoading(true);
-        const recs = await WorkflowRecommender.recommendNextSteps(
-          selectedProcedure.id,
-          selectedStep.id,
-          { diagnosis: symptoms || selectedCase?.diagnosis || "" }
-        );
-        setRecommendations(recs);
-        setRecLoading(false);
-      } else {
-        setRecommendations([]);
-      }
-    };
-    updateRecs();
-  }, [selectedProcedure, selectedStep, symptoms, selectedCase]);
+    setDatasetSteps([]);
+    setDatasetSearched(false);
+  }, [selectedProcedure, selectedStep]);
 
   const handleSelectCase = async (patientCase: any) => {
     setSelectedCase(patientCase);
     setShowCasePicker(false);
     setFileAnalysis(null);
-
-    // Pre-fill input fields from case data
     setSymptoms(patientCase.diagnosis || "");
-    setStage(patientCase.status?.replace(/-/g, ' ') || "");
     setInput(`Patient: ${patientCase.patient_name}, Tooth: ${patientCase.tooth_number}, Diagnosis: ${patientCase.diagnosis}`);
 
-    // Fetch latest uploaded file for this patient
     setFetchingFile(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -166,7 +118,6 @@ const AIEngine = () => {
         );
 
         if (patientFiles.length > 0) {
-          // Sort by most recent and get the latest
           const latestFile = patientFiles.sort((a, b) =>
             new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
           )[0];
@@ -176,30 +127,27 @@ const AIEngine = () => {
             .createSignedUrl(`${user.id}/${latestFile.name}`, 3600);
 
           if (urlData?.signedUrl) {
-            // Generate analysis based on file metadata + case data
             const ext = latestFile.name.split('.').pop()?.toLowerCase();
             const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext || '');
             const fileType = isImage ? 'radiograph/image' : 'document/report';
-
             setFileAnalysis(
               `📎 Latest ${fileType} detected for ${patientCase.patient_name}\n\n` +
               `File: ${latestFile.name.split('--').pop() || latestFile.name}\n` +
               `Uploaded: ${new Date(latestFile.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}\n\n` +
               `Based on the clinical record for Tooth ${patientCase.tooth_number} with diagnosis of "${patientCase.diagnosis}", ` +
-              `the uploaded ${fileType} has been linked to this case. ` +
-              `Cross-reference with the AI suggestion below for complete clinical guidance.`
+              `the uploaded ${fileType} has been linked to this case.`
             );
           } else {
-            setFileAnalysis(`No files found for ${patientCase.patient_name}. Upload a report from the Records page for file-linked analysis.`);
+            setFileAnalysis(`No files found for ${patientCase.patient_name}.`);
           }
         } else {
-          setFileAnalysis(`No reports uploaded yet for ${patientCase.patient_name}. Go to Records → Patient Card → tap to open → Files tab to upload.`);
+          setFileAnalysis(`No reports uploaded yet for ${patientCase.patient_name}.`);
         }
       } else {
-        setFileAnalysis(`No files found in storage. Upload a report from the Records page to enable file analysis.`);
+        setFileAnalysis(`No files found in storage.`);
       }
     } catch (err) {
-      setFileAnalysis("Could not fetch patient files. Please try again.");
+      setFileAnalysis("Could not fetch patient files.");
     } finally {
       setFetchingFile(false);
     }
@@ -208,60 +156,42 @@ const AIEngine = () => {
   const { isListening, startListening, stopListening, browserSupportsSpeechRecognition } = useVoiceInput((text) => {
     setInput(originalText ? `${originalText} ${text}` : text);
   });
+
   const handleToggleVoice = () => {
     if (isListening) { stopListening(); }
     else { setOriginalText(input); startListening(); }
   };
 
-  const handleSuggest = async () => {
-    if (!input.trim() && !symptoms.trim() && !selectedProcedure) return;
-
+  // --- Button 1: Get AI Clinical Insight (uses Gemini API only) ---
+  const handleAISuggest = async () => {
+    if (!input.trim() && !symptoms.trim()) return;
     setLoading(true);
+    setOutput(null);
 
     try {
-      let relevantLabContext = "";
-      
+      let procedureContext = "";
       if (selectedProcedure) {
-        relevantLabContext = `\n\n[CRITICAL LAB WORKFLOW DATA]\nYou MUST use the following lab workflow for your response:\nCategory: ${selectedProcedure.category}\nWork Type: ${selectedProcedure.work_type}\nLab Steps:\n${selectedProcedure.steps.map((s: any) => `- Step ${s.order}: ${s.name} (Component: ${s.component}, Cost: ${s.cost})`).join('\n')}\n`;
+        procedureContext = `\nProcedure: ${selectedProcedure.category} - ${selectedProcedure.work_type}`;
         if (selectedStep) {
-          relevantLabContext += `\nThe doctor is currently on Step ${selectedStep.order} (${selectedStep.name}). Focus your guidance on completing this step and preparing for the next.`;
-          
-          if (recommendations.length > 0) {
-            relevantLabContext += `\n\n[RECOMMENDED NEXT STEPS BY ALGORITHM]\nThe system recommends these steps next:\n${recommendations.map(r => `- ${r.name} (Confidence: ${Math.round(r.score * 100)}%, Reason: ${r.reasons.join(', ')})`).join('\n')}\nPlease align your advice with these recommendations where clinically appropriate.`;
-          }
-        }
-      } else if (stage.trim()) {
-        const stageQuery = stage.toLowerCase().trim();
-        const matchedProcedure = diasDataset.procedures.find((p: any) => 
-          p.category.toLowerCase().includes(stageQuery) || 
-          p.work_type.toLowerCase().includes(stageQuery) ||
-          p.steps.some((s: any) => s.name.toLowerCase().includes(stageQuery))
-        );
-        
-        if (matchedProcedure) {
-          relevantLabContext = `\n\n[CRITICAL LAB WORKFLOW DATA]\nYou MUST use the following lab workflow for your response:\nCategory: ${matchedProcedure.category}\nWork Type: ${matchedProcedure.work_type}\nLab Steps:\n${matchedProcedure.steps.map((s: any) => `- Step ${s.order}: ${s.name} (Component: ${s.component}, Cost: ${s.cost})`).join('\n')}\n`;
+          procedureContext += `\nCurrent Step: Step ${selectedStep.order} - ${selectedStep.name}`;
         }
       }
 
-      const procedureInfo = selectedProcedure ? `${selectedProcedure.category} - ${selectedProcedure.work_type}` : stage;
-      const stepInfo = selectedStep ? `Step ${selectedStep.order}: ${selectedStep.name}` : "";
-      
-      const combinedInput = `Patient Symptoms: ${symptoms}\nProcedure Stage: ${procedureInfo} ${stepInfo}\nDoctor Observations: ${input}`;
+      const combinedInput = `Patient Symptoms: ${symptoms}\nDoctor Observations: ${input}${procedureContext}`;
 
       const prompt = `You are an expert dental AI assistant. Based on the following clinical input, provide a diagnostic assessment and procedural guidance.
-Input: ${combinedInput}${relevantLabContext}
+Input: ${combinedInput}
 
 You MUST return ONLY a valid JSON object with the exact following structure, no markdown formatting or backticks:
 {
   "diagnosis": "Short diagnostic string including tooth number if applicable",
-  "confidence": "High", "Medium", or "Low",
-  "steps": ["Step 1", "Step 2", ...],
-  "instruments": ["Instrument 1", ...],
-  "materials": ["Material 1", ...],
-  "alerts": ["Clinical alert 1", ...]
+  "confidence": "High",
+  "steps": ["Step 1", "Step 2", "Step 3", "Step 4", "Step 5"],
+  "instruments": ["Instrument 1", "Instrument 2", "Instrument 3"],
+  "materials": ["Material 1", "Material 2", "Material 3"],
+  "alerts": ["Clinical alert 1", "Clinical alert 2"]
 }`;
 
-      // Call our secure Vercel backend proxy instead of Google directly
       const response = await fetch('/api/gemini', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -270,42 +200,75 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
 
       if (!response.ok) {
         const errorText = await response.text();
-        let errorMsg = errorText;
-        try {
-          const parsed = JSON.parse(errorText);
-          if (parsed.error && parsed.error.message) errorMsg = parsed.error.message;
-        } catch(e) {}
-        throw new Error(`API Error: ${errorMsg}`);
+        throw new Error(`API Error: ${errorText}`);
       }
 
       const result = await response.json();
       let textResponse = result.candidates[0].content.parts[0].text;
-      
-      // Clean up markdown formatting if Gemini returns it inside code blocks
       textResponse = textResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      
       const parsedOutput = JSON.parse(textResponse) as Output;
-
       setOutput(parsedOutput);
     } catch (error: any) {
       console.error("AI Generation Error:", error);
-      // Show actual error instead of static fallback
       setOutput({
-        diagnosis: "API Error: Could not generate insights",
+        diagnosis: "API Error — could not generate insights",
         confidence: "Low",
-        steps: ["Check your network connection", "Ensure the API key is valid", "Try rewording your prompt", error.message || "Unknown error occurred"],
+        steps: ["Check your network connection", "Ensure the API key is valid", error.message || "Unknown error"],
         instruments: ["N/A"],
         materials: ["N/A"],
-        alerts: ["The AI generation failed. Please try again."]
+        alerts: ["AI generation failed. Please try again."]
       });
     } finally {
       setLoading(false);
     }
   };
 
+  // --- Button 2: Search Next Steps from Dataset ---
+  const handleDatasetSearch = async () => {
+    if (!selectedProcedure) {
+      alert("Please select an Operation / Topic first to search the dataset.");
+      return;
+    }
+
+    setDatasetLoading(true);
+    setDatasetSteps([]);
+    setDatasetSearched(false);
+
+    try {
+      if (selectedStep) {
+        // Use WorkflowRecommender if a step is selected
+        const recs = await WorkflowRecommender.recommendNextSteps(
+          selectedProcedure.id,
+          selectedStep.id,
+          { diagnosis: symptoms || selectedCase?.diagnosis || "" }
+        );
+        setDatasetSteps(recs);
+      } else {
+        // No step selected — return all steps from the procedure as recommended steps
+        const allSteps: RecommendedStep[] = selectedProcedure.steps.map((s, i) => ({
+          id: s.id,
+          name: `Step ${s.order}: ${s.name}`,
+          score: 1 - (i * 0.05), // descending score
+          reasons: [`Component: ${s.component}`, `Cost: ₹${s.cost}`],
+        }));
+        setDatasetSteps(allSteps);
+      }
+      setDatasetSearched(true);
+    } catch (err) {
+      console.error("Dataset search error:", err);
+      setDatasetSearched(true);
+    } finally {
+      setDatasetLoading(false);
+    }
+  };
+
   return (
     <AppLayout>
-      <View style={styles.container}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={styles.description}>
           Share your clinical findings or the current procedure step to get AI-validated guidance.
         </Text>
@@ -334,11 +297,7 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
                   <Text style={styles.emptyPickerText}>No cases found. Add cases from the Records page.</Text>
                 ) : (
                   cases.map(c => (
-                    <TouchableOpacity
-                      key={c.id}
-                      style={styles.casePickerItem}
-                      onPress={() => handleSelectCase(c)}
-                    >
+                    <TouchableOpacity key={c.id} style={styles.casePickerItem} onPress={() => handleSelectCase(c)}>
                       <View style={styles.casePickerAvatar}>
                         <Text style={styles.casePickerAvatarText}>{c.patient_name?.charAt(0)}</Text>
                       </View>
@@ -365,18 +324,18 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
                 </TouchableOpacity>
               </View>
               <ScrollView>
-                {diasDataset.procedures.map((p: any) => (
+                {(diasDataset.procedures as DatasetProcedure[]).map((p) => (
                   <TouchableOpacity
                     key={p.id}
                     style={styles.casePickerItem}
                     onPress={() => {
                       setSelectedProcedure(p);
-                      setSelectedStep(null); // Reset step when procedure changes
+                      setSelectedStep(null);
                       setShowProcPicker(false);
                     }}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.casePickerName}>{p.category} - {p.work_type}</Text>
+                      <Text style={styles.casePickerName}>{p.category} — {p.work_type}</Text>
                       <Text style={styles.casePickerMeta}>{p.steps.length} steps in workflow</Text>
                     </View>
                   </TouchableOpacity>
@@ -397,14 +356,11 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
                 </TouchableOpacity>
               </View>
               <ScrollView>
-                {selectedProcedure?.steps.map((s: any) => (
+                {selectedProcedure?.steps.map((s) => (
                   <TouchableOpacity
                     key={s.id}
                     style={styles.casePickerItem}
-                    onPress={() => {
-                      setSelectedStep(s);
-                      setShowStepPicker(false);
-                    }}
+                    onPress={() => { setSelectedStep(s); setShowStepPicker(false); }}
                   >
                     <View style={styles.casePickerAvatar}>
                       <Text style={styles.casePickerAvatarText}>{s.order}</Text>
@@ -438,6 +394,7 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
           </View>
         )}
 
+        {/* Input Section */}
         <View style={styles.entrySection}>
           <View style={styles.inputCard}>
             <Text style={styles.inputLabel}>Clinical Symptoms</Text>
@@ -449,26 +406,30 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
               placeholderTextColor="#94A3B8"
             />
           </View>
+
           <View style={styles.grid}>
             <View style={styles.gridItem}>
               <TouchableOpacity style={styles.inputCard} onPress={() => setShowProcPicker(true)}>
                 <Text style={styles.inputLabel}>Operation / Topic</Text>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', height: 36 }}>
-                  <Text style={{ fontSize: 12, color: selectedProcedure ? '#0F172A' : '#94A3B8' }} numberOfLines={1}>
-                    {selectedProcedure ? `${selectedProcedure.category} - ${selectedProcedure.work_type}` : "Select Procedure..."}
+                <View style={styles.pickerRow}>
+                  <Text style={{ fontSize: 12, color: selectedProcedure ? '#0F172A' : '#94A3B8', flex: 1 }} numberOfLines={1}>
+                    {selectedProcedure ? `${selectedProcedure.category} — ${selectedProcedure.work_type}` : "Select Procedure..."}
                   </Text>
                   <ChevronDown size={14} color="#94A3B8" />
                 </View>
               </TouchableOpacity>
             </View>
             <View style={styles.gridItem}>
-              <TouchableOpacity style={styles.inputCard} onPress={() => selectedProcedure && setShowStepPicker(true)}>
+              <TouchableOpacity
+                style={[styles.inputCard, !selectedProcedure && { opacity: 0.5 }]}
+                onPress={() => selectedProcedure && setShowStepPicker(true)}
+              >
                 <Text style={styles.inputLabel}>Current Step</Text>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', height: 36 }}>
-                  <Text style={{ fontSize: 12, color: selectedStep ? '#0F172A' : (selectedProcedure ? '#94A3B8' : '#CBD5E1') }} numberOfLines={1}>
+                <View style={styles.pickerRow}>
+                  <Text style={{ fontSize: 12, color: selectedStep ? '#0F172A' : '#94A3B8', flex: 1 }} numberOfLines={1}>
                     {selectedStep ? `Step ${selectedStep.order}: ${selectedStep.name}` : "Select Step..."}
                   </Text>
-                  <ChevronDown size={14} color={selectedProcedure ? "#94A3B8" : "#CBD5E1"} />
+                  <ChevronDown size={14} color="#94A3B8" />
                 </View>
               </TouchableOpacity>
             </View>
@@ -478,16 +439,10 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
             <View style={styles.cardHeader}>
               <Text style={styles.inputLabel}>Observations & Thoughts</Text>
               <View style={styles.headerActions}>
-                {(input.length > 0 || symptoms.length > 0 || stage.length > 0) && (
+                {(input.length > 0 || symptoms.length > 0) && (
                   <TouchableOpacity
                     style={styles.clearButton}
-                    onPress={() => {
-                      setInput("");
-                      setOriginalText("");
-                      setSymptoms("");
-                      setStage("");
-                      setOutput(null);
-                    }}
+                    onPress={() => { setInput(""); setOriginalText(""); setSymptoms(""); setOutput(null); setDatasetSteps([]); setDatasetSearched(false); }}
                   >
                     <Text style={styles.clearButtonText}>Clear</Text>
                   </TouchableOpacity>
@@ -497,18 +452,15 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
                     style={[styles.voiceButton, isListening && styles.voiceButtonActive]}
                     onPress={handleToggleVoice}
                   >
-                    {isListening ? (
-                      <MicOff size={14} color="#EF4444" />
-                    ) : (
-                      <Mic size={14} color="#0EA5E9" />
-                    )}
+                    {isListening ? <MicOff size={14} color="#EF4444" /> : <Mic size={14} color="#0EA5E9" />}
                     <Text style={[styles.voiceButtonText, isListening && styles.voiceButtonTextActive]}>
-                      {isListening ? "Stop Listening" : "Voice Guide"}
+                      {isListening ? "Stop" : "Voice"}
                     </Text>
                   </TouchableOpacity>
                 )}
               </View>
             </View>
+
             <TextInput
               value={input}
               onChangeText={setInput}
@@ -517,46 +469,80 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
               style={styles.textarea}
               placeholderTextColor="#94A3B8"
             />
-            <TouchableOpacity
-              onPress={handleSuggest}
-              style={styles.suggestButton}
-              disabled={loading}
-            >
-              {loading ? <Loader2 size={16} color="#FFFFFF" /> : <Sparkles size={16} color="#FFFFFF" />}
-              <Text style={styles.suggestButtonText}>Get AI Clinical Insight</Text>
-            </TouchableOpacity>
+
+            {/* Two buttons side by side */}
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                onPress={handleAISuggest}
+                style={[styles.aiButton, loading && { opacity: 0.7 }]}
+                disabled={loading}
+              >
+                {loading
+                  ? <ActivityIndicator size="small" color="#FFFFFF" />
+                  : <Sparkles size={15} color="#FFFFFF" />
+                }
+                <Text style={styles.aiButtonText}>
+                  {loading ? "Analysing..." : "Get AI Clinical Insight"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleDatasetSearch}
+                style={[styles.datasetButton, datasetLoading && { opacity: 0.7 }]}
+                disabled={datasetLoading}
+              >
+                {datasetLoading
+                  ? <ActivityIndicator size="small" color="#8B5CF6" />
+                  : <ListChecks size={15} color="#8B5CF6" />
+                }
+                <Text style={styles.datasetButtonText}>
+                  {datasetLoading ? "Searching..." : "Next Steps"}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
-        {output && !loading && (
-          <View style={styles.outputSection}>
-            {/* Recommended Path Card (Algorithm Result) */}
-            {recommendations.length > 0 && (
-              <View style={styles.recommendationCard}>
-                <View style={styles.cardTitleRow}>
-                  <Sparkles size={16} color="#8B5CF6" />
-                  <Text style={[styles.cardTitle, { color: '#8B5CF6' }]}>AI Recommended Path</Text>
-                </View>
-                <View style={styles.recsList}>
-                  {recommendations.map((rec, i) => (
-                    <View key={rec.id} style={styles.recItem}>
-                      <View style={[styles.recBadge, i === 0 && styles.recBadgePrimary]}>
-                        <Text style={styles.recBadgeText}>{Math.round(rec.score * 100)}% Match</Text>
-                      </View>
-                      <View style={styles.recContent}>
-                        <Text style={styles.recName}>{rec.name}</Text>
-                        <Text style={styles.recMeta}>{rec.reasons[0] || "Standard workflow progression"}</Text>
-                      </View>
+        {/* Dataset Next Steps Result */}
+        {datasetSearched && (
+          <View style={styles.datasetCard}>
+            <View style={styles.cardTitleRow}>
+              <ListChecks size={16} color="#8B5CF6" />
+              <Text style={[styles.cardTitle, { color: '#8B5CF6' }]}>
+                {selectedStep
+                  ? `Recommended Next Steps after Step ${selectedStep.order}`
+                  : `Workflow Steps — ${selectedProcedure?.category}`}
+              </Text>
+            </View>
+            {datasetSteps.length === 0 ? (
+              <Text style={styles.emptyPickerText}>No steps found for this selection.</Text>
+            ) : (
+              <View style={styles.recsList}>
+                {datasetSteps.map((rec, i) => (
+                  <View key={rec.id} style={styles.recItem}>
+                    <View style={[styles.recBadge, i === 0 && styles.recBadgePrimary]}>
+                      <Text style={styles.recBadgeText}>{Math.round(rec.score * 100)}%</Text>
                     </View>
-                  ))}
-                </View>
+                    <View style={styles.recContent}>
+                      <Text style={styles.recName}>{rec.name}</Text>
+                      {rec.reasons.map((r, ri) => (
+                        <Text key={ri} style={styles.recMeta}>{r}</Text>
+                      ))}
+                    </View>
+                  </View>
+                ))}
               </View>
             )}
+          </View>
+        )}
 
+        {/* AI Output */}
+        {output && !loading && (
+          <View style={styles.outputSection}>
             {/* Diagnosis card */}
             <View style={styles.diagnosisCard}>
               <View style={styles.diagnosisHeader}>
-                <Text style={styles.diagnosisLabel}>Suggested diagnosis</Text>
+                <Text style={styles.diagnosisLabel}>AI Suggested Diagnosis</Text>
                 <View style={[styles.confidenceBadge, { backgroundColor: confidenceColors[output.confidence] }]}>
                   <ShieldCheck size={10} color="#FFFFFF" />
                   <Text style={styles.confidenceText}>{output.confidence}</Text>
@@ -569,7 +555,7 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
             <View style={styles.card}>
               <View style={styles.cardTitleRow}>
                 <ArrowRight size={16} color="#0EA5E9" />
-                <Text style={styles.cardTitle}>Next steps</Text>
+                <Text style={styles.cardTitle}>Next Steps</Text>
               </View>
               <View style={styles.stepsList}>
                 {output.steps.map((step, i) => (
@@ -592,8 +578,8 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
                 <Text style={styles.cardTitle}>Instruments</Text>
               </View>
               <View style={styles.list}>
-                {output.instruments.map((item) => (
-                  <View key={item} style={styles.listItem}>
+                {output.instruments.map((item, i) => (
+                  <View key={i} style={styles.listItem}>
                     <View style={[styles.dot, { backgroundColor: "#8B5CF6" }]} />
                     <Text style={styles.listText}>{item}</Text>
                   </View>
@@ -607,8 +593,8 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
                 <Text style={styles.cardTitle}>Materials</Text>
               </View>
               <View style={styles.list}>
-                {output.materials.map((item) => (
-                  <View key={item} style={styles.listItem}>
+                {output.materials.map((item, i) => (
+                  <View key={i} style={styles.listItem}>
                     <View style={[styles.dot, { backgroundColor: "#F43F5E" }]} />
                     <Text style={styles.listText}>{item}</Text>
                   </View>
@@ -616,19 +602,18 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
               </View>
             </View>
 
-            {/* Alerts */}
             <View style={styles.alertCard}>
               <AlertTriangle size={20} color="#F59E0B" />
               <View style={styles.alertContent}>
                 <Text style={styles.alertTitle}>Verify clinically before proceeding</Text>
-                {output.alerts.map((alert) => (
-                  <Text key={alert} style={styles.alertText}>• {alert}</Text>
+                {output.alerts.map((alert, i) => (
+                  <Text key={i} style={styles.alertText}>• {alert}</Text>
                 ))}
               </View>
             </View>
           </View>
         )}
-      </View>
+      </ScrollView>
     </AppLayout>
   );
 };
@@ -637,6 +622,7 @@ const styles = StyleSheet.create({
   container: {
     padding: 16,
     gap: 20,
+    paddingBottom: 40,
   },
   description: {
     fontSize: 14,
@@ -653,12 +639,18 @@ const styles = StyleSheet.create({
   gridItem: {
     flex: 1,
   },
+  pickerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    height: 36,
+  },
   inputCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.5)",
+    backgroundColor: "rgba(255,255,255,0.5)",
     borderRadius: 20,
     padding: 12,
     borderWidth: 1,
-    borderColor: "rgba(226, 232, 240, 0.6)",
+    borderColor: "rgba(226,232,240,0.6)",
   },
   inputLabel: {
     fontSize: 10,
@@ -679,7 +671,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     borderWidth: 1,
-    borderColor: "rgba(226, 232, 240, 0.6)",
+    borderColor: "rgba(226,232,240,0.6)",
     gap: 16,
   },
   cardHeader: {
@@ -687,38 +679,37 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   voiceButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
     borderWidth: 1,
     borderColor: "#E2E8F0",
     borderRadius: 20,
-    paddingHorizontal: 12,
-    height: 32,
+    paddingHorizontal: 10,
+    height: 30,
   },
   voiceButtonActive: {
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    backgroundColor: "rgba(239,68,68,0.1)",
     borderColor: "#EF4444",
   },
   voiceButtonText: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#64748B",
     fontWeight: "500",
   },
   voiceButtonTextActive: {
     color: "#EF4444",
   },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
   clearButton: {
-    paddingHorizontal: 12,
-    height: 32,
+    paddingHorizontal: 10,
+    height: 30,
     justifyContent: "center",
-    alignItems: "center",
   },
   clearButtonText: {
     fontSize: 12,
@@ -728,11 +719,16 @@ const styles = StyleSheet.create({
   textarea: {
     fontSize: 14,
     color: "#0F172A",
-    minHeight: 120,
+    minHeight: 100,
     textAlignVertical: "top",
     padding: 0,
   },
-  suggestButton: {
+  buttonRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  aiButton: {
+    flex: 2,
     backgroundColor: "#0EA5E9",
     height: 48,
     borderRadius: 16,
@@ -741,20 +737,45 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  suggestButtonText: {
+  aiButtonText: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  datasetButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: "#8B5CF6",
+    backgroundColor: "#F5F3FF",
+  },
+  datasetButtonText: {
+    color: "#8B5CF6",
+    fontSize: 13,
     fontWeight: "600",
   },
   outputSection: {
     gap: 16,
   },
+  datasetCard: {
+    backgroundColor: "#F5F3FF",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(139,92,246,0.2)",
+    gap: 12,
+  },
   diagnosisCard: {
-    backgroundColor: "rgba(14, 165, 233, 0.05)",
+    backgroundColor: "rgba(14,165,233,0.05)",
     borderRadius: 20,
     padding: 16,
     borderWidth: 2,
-    borderColor: "rgba(14, 165, 233, 0.2)",
+    borderColor: "rgba(14,165,233,0.2)",
   },
   diagnosisHeader: {
     flexDirection: "row",
@@ -792,7 +813,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     borderWidth: 1,
-    borderColor: "rgba(226, 232, 240, 0.6)",
+    borderColor: "rgba(226,232,240,0.6)",
   },
   cardTitleRow: {
     flexDirection: "row",
@@ -853,15 +874,16 @@ const styles = StyleSheet.create({
   listText: {
     fontSize: 14,
     color: "#0F172A",
+    flex: 1,
   },
   alertCard: {
-    backgroundColor: "rgba(245, 158, 11, 0.05)",
+    backgroundColor: "rgba(245,158,11,0.05)",
     borderRadius: 20,
     padding: 16,
     flexDirection: "row",
     gap: 12,
     borderWidth: 1,
-    borderColor: "rgba(245, 158, 11, 0.2)",
+    borderColor: "rgba(245,158,11,0.2)",
   },
   alertContent: {
     flex: 1,
@@ -876,12 +898,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#64748B",
     lineHeight: 18,
-  },
-  spin: {
-    // Rotation logic in RN usually requires Animated API
-  },
-  pulse: {
-    // Pulse logic in RN usually requires Animated API
   },
   patientSelector: {
     flexDirection: "row",
@@ -960,11 +976,11 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   fileAnalysisCard: {
-    backgroundColor: "rgba(139, 92, 246, 0.06)",
+    backgroundColor: "rgba(139,92,246,0.06)",
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: "rgba(139, 92, 246, 0.2)",
+    borderColor: "rgba(139,92,246,0.2)",
     gap: 8,
   },
   fileAnalysisHeader: {
@@ -984,20 +1000,12 @@ const styles = StyleSheet.create({
     color: "#475569",
     lineHeight: 20,
   },
-  recommendationCard: {
-    backgroundColor: "#F5F3FF",
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "rgba(139, 92, 246, 0.2)",
-    marginBottom: 8,
-  },
   recsList: {
     gap: 12,
   },
   recItem: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 12,
   },
   recBadge: {
@@ -1005,7 +1013,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
-    minWidth: 70,
+    minWidth: 48,
     alignItems: "center",
   },
   recBadgePrimary: {
