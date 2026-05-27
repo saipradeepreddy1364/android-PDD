@@ -20,7 +20,6 @@ import {
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 
-// Helper to generate dynamic timeline based on status
 const getDynamicTimeline = (patient: any) => {
   const t = [
     { date: new Date(patient.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }), title: "Case Created", desc: `${patient.diagnosis || 'Clinical entry initiated'}`, done: true, type: "diagnosis" },
@@ -89,7 +88,6 @@ const PatientDetail = () => {
 
       if (caseData) {
         setPatient(caseData);
-
         if (caseData.doctor_id) {
           await fetchFiles(caseData.doctor_id, caseData.patient_name);
         }
@@ -176,7 +174,6 @@ const PatientDetail = () => {
         .eq('id', id);
 
       if (error) throw error;
-
       setPatient({ ...patient, status: newStatus });
       alert(`Patient journey moved to: ${newStatus.replace('-', ' ')}`);
     } catch (error: any) {
@@ -199,7 +196,6 @@ const PatientDetail = () => {
     }
   };
 
-  // ── NEW: Delete the entire case ──────────────────────────────────────────
   const handleDeleteCase = async () => {
     if (Platform.OS === 'web') {
       if (!window.confirm('Are you sure you want to permanently delete this case? This cannot be undone.')) return;
@@ -220,7 +216,6 @@ const PatientDetail = () => {
       setActionLoading(false);
     }
   };
-  // ────────────────────────────────────────────────────────────────────────
 
   const handleDownloadFile = async (path: string, name: string) => {
     try {
@@ -323,33 +318,9 @@ const PatientDetail = () => {
       <View style={styles.infoSection}>
         <Text style={styles.infoLabel}>Reported Symptoms</Text>
         <View style={styles.symptomRow}>
-          {patient.is_urgent && (
-            <View style={[styles.symptomBadge, { backgroundColor: '#FEE2E2' }]}>
-              <Text style={[styles.symptomBadgeText, { color: '#EF4444' }]}>Urgent Case</Text>
-            </View>
-          )}
           <View style={styles.symptomBadge}>
             <Text style={styles.symptomBadgeText}>Standard Review</Text>
           </View>
-        </View>
-      </View>
-    </View>
-  );
-
-  const renderAI = () => (
-    <View style={styles.card}>
-      <View style={styles.cardHeaderRow}>
-        <Sparkles size={16} color="#F43F5E" />
-        <Text style={styles.cardHeaderTitle}>AI suggestions log</Text>
-      </View>
-      <View style={styles.aiList}>
-        <View style={styles.aiItem}>
-          <Text style={styles.aiDot}>→</Text>
-          <Text style={styles.aiText}>Review patient history for similar issues</Text>
-        </View>
-        <View style={styles.aiItem}>
-          <Text style={styles.aiDot}>→</Text>
-          <Text style={styles.aiText}>Use AI Engine for real-time procedure guidance</Text>
         </View>
       </View>
     </View>
@@ -370,6 +341,7 @@ const PatientDetail = () => {
         {uploading ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Upload size={16} color="#FFFFFF" />}
         <Text style={styles.uploadButtonText}>{uploading ? "Uploading..." : "Upload New File"}</Text>
       </TouchableOpacity>
+
       <View style={styles.fileList}>
         {files.length > 0 ? (
           files.map((f) => (
@@ -460,7 +432,6 @@ const PatientDetail = () => {
               {renderTimeline()}
               {renderInfo()}
               {renderNotes()}
-              {renderAI()}
               {renderFiles()}
             </>
           )}
@@ -486,7 +457,6 @@ const PatientDetail = () => {
                   <Text style={[styles.actionBtnLabel, patient.status === 'completed' && styles.actionBtnLabelActive]}>Complete</Text>
                 </TouchableOpacity>
 
-                {/* ── Delete Case Button ── */}
                 <TouchableOpacity
                   style={[styles.actionBtn, { borderColor: '#FCA5A5', backgroundColor: '#FEF2F2' }]}
                   onPress={handleDeleteCase}
@@ -695,21 +665,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#475569",
     lineHeight: 22,
-  },
-  aiList: {
-    gap: 10,
-  },
-  aiItem: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  aiDot: {
-    color: "#F43F5E",
-    fontWeight: "700",
-  },
-  aiText: {
-    fontSize: 14,
-    color: "#475569",
   },
   fileList: {
     gap: 10,
