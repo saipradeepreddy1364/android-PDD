@@ -44,7 +44,7 @@ const getDynamicTimeline = (patient: any) => {
 const PatientDetail = () => {
   const route = useRoute<any>();
   const id = route.params?.id;
-  const [activeTab, setActiveTab] = useState("timeline");
+  const [activeTab, setActiveTab] = useState("all info");
   const [patient, setPatient] = useState<any>(null);
   const [files, setFiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -421,22 +421,29 @@ const PatientDetail = () => {
         </View>
 
         <View style={styles.tabBar}>
-          {["timeline", "info", "actions", "notes", "ai", "files"].map((tab) => (
+          {["all info", "actions"].map((tab) => (
             <TouchableOpacity 
               key={tab}
               onPress={() => setActiveTab(tab)}
               style={[styles.tabButton, activeTab === tab && styles.tabButtonActive]}
             >
               <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                {tab === 'ai' ? 'AI' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
         <View style={styles.content}>
-          {activeTab === "timeline" && renderTimeline()}
-          {activeTab === "info" && renderInfo()}
+          {activeTab === "all info" && (
+            <>
+              {renderTimeline()}
+              {renderInfo()}
+              {renderNotes()}
+              {renderAI()}
+              {renderFiles()}
+            </>
+          )}
           {activeTab === "actions" && (
             <View style={styles.card}>
               <Text style={styles.cardHeaderTitle}>Action Center</Text>
@@ -452,14 +459,6 @@ const PatientDetail = () => {
                 </TouchableOpacity>
 
                 <TouchableOpacity 
-                  style={[styles.actionBtn, patient.status === 'checkup-pending' && styles.actionBtnActive]}
-                  onPress={() => handleStatusUpdate('checkup-pending')}
-                >
-                  <Calendar size={20} color={patient.status === 'checkup-pending' ? "#FFFFFF" : "#8B5CF6"} />
-                  <Text style={[styles.actionBtnLabel, patient.status === 'checkup-pending' && styles.actionBtnLabelActive]}>Set Checkup</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
                   style={[styles.actionBtn, patient.status === 'completed' && styles.actionBtnActive]}
                   onPress={() => handleStatusUpdate('completed')}
                 >
@@ -469,9 +468,6 @@ const PatientDetail = () => {
               </View>
             </View>
           )}
-          {activeTab === "notes" && renderNotes()}
-          {activeTab === "ai" && renderAI()}
-          {activeTab === "files" && renderFiles()}
         </View>
       </View>
     </AppLayout>
