@@ -1,18 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions, ActivityIndicator, Platform } from "react-native";
-import { Download, Printer, Send, ClipboardList } from "lucide-react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions, ActivityIndicator, Platform, Modal } from "react-native";
+import { Download, Printer, Send, ClipboardList, ChevronDown, X } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 import { useNavigation, useRoute } from "@react-navigation/native";
-
-const labOptions = [
-  { id: "crown", label: "Crown" },
-  { id: "rct", label: "Root Canal Treatment" },
-  { id: "impression", label: "Impression" },
-  { id: "prosthesis", label: "Prosthesis" },
-  { id: "bridge", label: "Bridge" },
-  { id: "denture", label: "Denture" },
-];
+import diasDataset from "@/data/dias_lab_workflow.json";
 
 const LabRequisition = () => {
   const navigation = useNavigation<any>();
@@ -20,7 +12,8 @@ const LabRequisition = () => {
   const caseId = route.params?.caseId;
   
   const [loading, setLoading] = useState(!!caseId);
-  const [selected, setSelected] = useState<string[]>(["crown"]);
+  const [selectedProc, setSelectedProc] = useState<any>(null);
+  const [showProcPicker, setShowProcPicker] = useState(false);
   const [patientData, setPatientData] = useState<any>({
     patient_name: "",
     age: "",
@@ -35,9 +28,6 @@ const LabRequisition = () => {
     instructions: ""
   });
   const [dentistName, setDentistName] = useState("Doctor");
-  
-  const toggle = (id: string) =>
-    setSelected((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
   useEffect(() => {
     const fetchData = async () => {
@@ -70,7 +60,7 @@ const LabRequisition = () => {
         .from('cases')
         .update({ 
           status: 'lab-pending',
-          notes: (patientData.notes || "") + `\n\n[LAB REQUESTED - ${new Date().toLocaleDateString()}]\nWork: ${selected.join(", ")}\nMaterial: ${labDetails.material}\nShade: ${labDetails.shade}`
+          notes: (patientData.notes || "") + `\n\n[LAB REQUESTED - ${new Date().toLocaleDateString()}]\nWork: ${selectedProc ? selectedProc.work_type : 'None'}\nMaterial: ${labDetails.material}\nShade: ${labDetails.shade}`
         })
         .eq('id', caseId || patientData.id);
 
@@ -211,7 +201,7 @@ const LabRequisition = () => {
 
           <div class="section-title">Required Lab Work</div>
           <div class="badges">
-            ${selected.map(item => `<span class="badge">${item.toUpperCase()}</span>`).join('')}
+            <span class="badge">${selectedProc ? selectedProc.work_type : 'None'}</span>
           </div>
 
           <div class="grid">
@@ -251,7 +241,7 @@ const LabRequisition = () => {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.reqNumber}>Lab requisition #{caseId ? caseId.slice(0, 8).toUpperCase() : 'NEW'}</Text>
-            <Text style={styles.cardTitle}>{selected.join(" & ") || "New Request"} — Tooth {patientData.tooth_number || "XX"}</Text>
+            <Text style={styles.cardTitle}>{selectedProc ? selectedProc.work_type : "New Request"} — Tooth {patientData.tooth_number || "XX"}</Text>
             <View style={styles.headerMeta}>
               <Text style={styles.metaText}>{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
               <Text style={styles.metaText}>Return: 5–7 days</Text>
@@ -296,22 +286,43 @@ const LabRequisition = () => {
             </View>
 
             <View style={styles.selectionGroup}>
-              <Text style={styles.label}>Lab work required</Text>
-              <View style={styles.badgeGrid}>
-                {labOptions.map((o) => {
-                  const active = selected.includes(o.id);
-                  return (
-                    <TouchableOpacity
-                      key={o.id}
-                      onPress={() => toggle(o.id)}
-                      style={[styles.badge, active && styles.badgeActive]}
-                    >
-                      <Text style={[styles.badgeText, active && styles.badgeTextActive]}>{o.label}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              <Text style={styles.label}>Lab work required (Procedure)</Text>
+              <TouchableOpacity 
+                style={[styles.input, { justifyContent: 'center' }]} 
+                onPress={() => setShowProcPicker(true)}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 14, color: selectedProc ? '#0F172A' : '#94A3B8' }}>
+                    {selectedProc ? `${selectedProc.category} - ${selectedProc.work_type}` : "Select Lab Procedure..."}
+                  </Text>
+                  <ChevronDown size={16} color="#94A3B8" />
+                </View>
+              </TouchableOpacity>
             </View>
+
+            {selectedProc && (
+              <View style={styles.selectionGroup}>
+                <Text style={styles.label}>Workflow Steps & Details</Text>
+                <View style={styles.stepsContainer}>
+                  {selectedProc.steps.map((step: any, index: number) => (
+                    <View key={step.id} style={styles.stepItem}>
+                      <View style={styles.stepHeader}>
+                        <View style={styles.stepBadge}>
+                          <Text style={styles.stepBadgeText}>{step.order}</Text>
+                        </View>
+                        <Text style={styles.stepTitle}>{step.name}</Text>
+                      </View>
+                      <Text style={styles.stepDesc}>{step.description}</Text>
+                      <View style={styles.stepMetaRow}>
+                        <Text style={styles.stepMeta}>Comp: {step.component}</Text>
+                        <Text style={styles.stepMeta}>Brand: {step.brand}</Text>
+                        <Text style={styles.stepMeta}>Cost: ₹{step.cost}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Material</Text>
@@ -383,6 +394,35 @@ const LabRequisition = () => {
             )}
           </TouchableOpacity>
         </View>
+        <Modal visible={showProcPicker} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Lab Procedure</Text>
+                <TouchableOpacity onPress={() => setShowProcPicker(false)}>
+                  <X size={20} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView>
+                {diasDataset.procedures.map((p: any) => (
+                  <TouchableOpacity
+                    key={p.id}
+                    style={styles.casePickerItem}
+                    onPress={() => {
+                      setSelectedProc(p);
+                      setShowProcPicker(false);
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.casePickerName}>{p.category} - {p.work_type}</Text>
+                      <Text style={styles.casePickerMeta}>{p.steps.length} steps in workflow</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       </View>
     </AppLayout>
   );
@@ -535,6 +575,104 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+  },
+  stepsContainer: {
+    gap: 12,
+  },
+  stepItem: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 16,
+    padding: 16,
+    gap: 8,
+  },
+  stepHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  stepBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#0EA5E9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  stepTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F172A",
+    flex: 1,
+  },
+  stepDesc: {
+    fontSize: 13,
+    color: "#475569",
+    lineHeight: 20,
+  },
+  stepMetaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginTop: 4,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+  },
+  stepMeta: {
+    fontSize: 12,
+    color: "#64748B",
+    fontWeight: "500",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "80%",
+    padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 16,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  casePickerItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: "#F8FAFC",
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+  },
+  casePickerName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  casePickerMeta: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: 2,
   },
 });
 

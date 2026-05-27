@@ -153,7 +153,7 @@ const Patients = () => {
                   ]}
                 >
                   <Text style={[styles.avatarText, p.is_urgent ? styles.avatarTextUrgent : styles.avatarTextNormal]}>
-                    {p.patient_name.charAt(0)}
+                    {p.patient_name ? p.patient_name.charAt(0) : "P"}
                   </Text>
                 </View>
                 <View style={styles.cardContent}>

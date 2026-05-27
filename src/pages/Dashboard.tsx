@@ -229,7 +229,7 @@ const Dashboard = () => {
                     >
                       <View style={[styles.patientAvatar, { backgroundColor: c.urgent ? "#EF444415" : "#0EA5E915" }]}>
                         <Text style={[styles.avatarText, { color: c.urgent ? "#EF4444" : "#0EA5E9" }]}>
-                          {c.name.charAt(0)}
+                          {c.name ? c.name.charAt(0) : "P"}
                         </Text>
                       </View>
                       <View style={styles.caseInfo}>
