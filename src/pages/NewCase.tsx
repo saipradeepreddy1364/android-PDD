@@ -1,17 +1,11 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions, Modal, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { X, Loader2, ChevronDown, Check, Stethoscope, Clipboard } from "lucide-react-native";
+import { X, ChevronDown, Check, Stethoscope, Clipboard } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 
 const symptomOptions = ["Pain", "Swelling", "Sensitivity", "Sinus tract", "Mobility", "Bleeding"];
-
-const formatCaseType = (type: string) => {
-  if (type === 'active') return 'New';
-  if (type === 'lab') return 'Lab (existing case)';
-  return type.charAt(0).toUpperCase() + type.slice(1);
-};
 
 const NewCase = () => {
   const navigation = useNavigation<any>();
@@ -21,7 +15,7 @@ const NewCase = () => {
   const [formData, setFormData] = useState({
     patient_name: "",
     age: "",
-    gender: "female",
+    gender: "",           // ← blank by default
     tooth_number: "",
     chief_complaint: "",
     notes: "",
@@ -46,13 +40,20 @@ const NewCase = () => {
     checkAccess();
   }, [navigation]);
 
-
   const toggleSymptom = (s: string) =>
     setSymptoms((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
 
   const handleSubmit = async () => {
-    setLoading(true);
+    if (!formData.patient_name.trim()) {
+      alert("Please enter the patient name.");
+      return;
+    }
+    if (!formData.gender) {
+      alert("Please select a gender.");
+      return;
+    }
 
+    setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -60,25 +61,19 @@ const NewCase = () => {
         return;
       }
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, org_id')
-        .eq('id', user.id)
-        .single();
-
       const { error } = await supabase.from('cases').insert([
         {
           patient_name: formData.patient_name,
-          // age: parseInt(formData.age) || 0,     // ADD COLUMN: ALTER TABLE cases ADD COLUMN age INTEGER;
           gender: formData.gender,
           tooth_number: formData.tooth_number,
           diagnosis: formData.chief_complaint,
-          // notes: formData.notes,                 // ADD COLUMN: ALTER TABLE cases ADD COLUMN notes TEXT;
-          status: formData.case_type === "lab" ? "lab-pending" : formData.case_type === "new-checkup" ? "checkup-pending" : "in-progress",
-          // is_urgent: symptoms.includes("Pain") || symptoms.includes("Swelling"), // ADD COLUMN: ALTER TABLE cases ADD COLUMN is_urgent BOOLEAN DEFAULT false;
+          status:
+            formData.case_type === "lab"
+              ? "lab-pending"
+              : formData.case_type === "new-checkup"
+                ? "checkup-pending"
+                : "in-progress",
           doctor_id: user.id,
-          // doctor_name: profile?.full_name || user.user_metadata.full_name, // ADD COLUMN: ALTER TABLE cases ADD COLUMN doctor_name TEXT;
-          // org_id: profile?.org_id,               // ADD COLUMN: ALTER TABLE cases ADD COLUMN org_id UUID;
         },
       ]);
 
@@ -100,6 +95,7 @@ const NewCase = () => {
         <View style={styles.form}>
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Patient details</Text>
+
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Patient name</Text>
               <TextInput
@@ -150,14 +146,15 @@ const NewCase = () => {
                   onPress={() => setGenderModalVisible(true)}
                   style={styles.selectTrigger}
                 >
-                  <Text style={styles.selectValue}>
-                    {formData.gender.charAt(0).toUpperCase() + formData.gender.slice(1)}
+                  <Text style={[styles.selectValue, !formData.gender && styles.selectPlaceholder]}>
+                    {formData.gender
+                      ? formData.gender.charAt(0).toUpperCase() + formData.gender.slice(1)
+                      : "Select"}
                   </Text>
                   <ChevronDown size={16} color="#64748B" />
                 </TouchableOpacity>
               </View>
             </View>
-
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Tooth number (FDI)</Text>
@@ -214,7 +211,6 @@ const NewCase = () => {
           </View>
 
           <View style={styles.buttonRow}>
-
             <TouchableOpacity
               style={[styles.submitButton, loading && styles.buttonDisabled]}
               onPress={handleSubmit}
@@ -335,6 +331,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#0F172A",
   },
+  selectPlaceholder: {
+    color: "#94A3B8",   // ← grey like other placeholders when nothing selected
+  },
   typeRow: {
     flexDirection: "row",
     gap: 8,
@@ -402,20 +401,6 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 8,
   },
-  draftButton: {
-    flex: 1,
-    height: 48,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  draftButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#0F172A",
-  },
   submitButton: {
     flex: 2,
     height: 48,
@@ -449,23 +434,25 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 16,
   },
-  modalOption: {
-    height: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-  },
-  modalOptionText: {
-    fontSize: 16,
-    color: "#0F172A",
-    fontWeight: "500",
-  },
   modalTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#0F172A",
     marginBottom: 8,
+  },
+  modalOption: {
+    height: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+    paddingHorizontal: 4,
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: "#0F172A",
+    fontWeight: "500",
   },
   modalOptionTextActive: {
     color: "#0EA5E9",
