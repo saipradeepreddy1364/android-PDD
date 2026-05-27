@@ -70,9 +70,9 @@ const NewCase = () => {
         {
           patient_name: formData.patient_name,
           // age: parseInt(formData.age) || 0,     // ADD COLUMN: ALTER TABLE cases ADD COLUMN age INTEGER;
-          // gender: formData.gender,               // ADD COLUMN: ALTER TABLE cases ADD COLUMN gender TEXT;
+          gender: formData.gender,
           tooth_number: formData.tooth_number,
-          // diagnosis: formData.chief_complaint,   // ADD COLUMN: ALTER TABLE cases ADD COLUMN diagnosis TEXT;
+          diagnosis: formData.chief_complaint,
           // notes: formData.notes,                 // ADD COLUMN: ALTER TABLE cases ADD COLUMN notes TEXT;
           status: formData.case_type === "lab" ? "lab-pending" : formData.case_type === "new-checkup" ? "checkup-pending" : "in-progress",
           // is_urgent: symptoms.includes("Pain") || symptoms.includes("Swelling"), // ADD COLUMN: ALTER TABLE cases ADD COLUMN is_urgent BOOLEAN DEFAULT false;
