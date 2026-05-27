@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Dimensions } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Search, Plus, AlertCircle, Loader2, FileText, Calendar } from "lucide-react-native";
@@ -14,74 +14,71 @@ const Patients = () => {
   const [search, setSearch] = useState("");
   const [role, setRole] = useState<string>("doctor");
 
-  useEffect(() => {
-    const fetchCases = async () => {
-      const guestValue = await AsyncStorage.getItem("guestMode");
-      const isGuest = guestValue === "true";
-      if (isGuest) {
-        setCases([]);
-        setLoading(false);
-        return;
-      }
+  // Store user info in refs so polling interval can access latest values
+  const userRef = useRef<any>(null);
+  const roleRef = useRef<string>("doctor");
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const channelRef = useRef<any>(null);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user;
-      
-      if (user) {
-        // 1. Try metadata first
-        const metaRole = user.user_metadata?.role;
-        
-        // 2. Fetch role from profile table
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-        
-        const userRole = profile?.role || metaRole || 'doctor';
-        setRole(userRole);
+  const fetchCases = async (isInitial = false) => {
+    if (isInitial) setLoading(true);
 
-        let query = supabase.from('cases').select('*');
-        
-        if (userRole === 'organization') {
-          query = query.eq('org_id', user.id);
-        } else {
-          query = query.eq('doctor_id', user.id);
-        }
+    const guestValue = await AsyncStorage.getItem("guestMode");
+    const isGuest = guestValue === "true";
+    if (isGuest) {
+      setCases([]);
+      if (isInitial) setLoading(false);
+      return;
+    }
 
-        const { data, error } = await query.order('created_at', { ascending: false });
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
 
-        if (!error && data) {
-          setCases(data);
-        }
+    if (!user) {
+      if (isInitial) setLoading(false);
+      return;
+    }
 
-        // For files, we need to handle listing based on doctors in the org if organization
-        if (userRole === 'organization') {
-          const { data: doctors } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('org_id', user.id);
-          
-          if (doctors) {
-            const counts: Record<string, number> = {};
-            for (const dr of doctors) {
-              const { data: files } = await supabase.storage.from('clinical-files').list(dr.id);
-              if (files) {
-                files.forEach(f => {
-                  const parts = f.name.split('--');
-                  if (parts.length > 1) {
-                    const pName = parts[0].split('_')[0]?.replace(/-/g, ' ');
-                    if (pName) counts[pName] = (counts[pName] || 0) + 1;
-                  }
-                });
-              }
-            }
-            setFileCounts(counts);
-          }
-        } else {
-          const { data: files } = await supabase.storage.from('clinical-files').list(user.id);
+    // Only fetch profile/role on first load
+    if (isInitial) {
+      const metaRole = user.user_metadata?.role;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      const userRole = profile?.role || metaRole || 'doctor';
+      setRole(userRole);
+      roleRef.current = userRole;
+      userRef.current = user;
+    }
+
+    const currentRole = roleRef.current;
+    const currentUser = userRef.current || user;
+
+    let query = supabase.from('cases').select('*');
+    if (currentRole === 'organization') {
+      query = query.eq('org_id', currentUser.id);
+    } else {
+      query = query.eq('doctor_id', currentUser.id);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
+    if (!error && data) setCases(data);
+
+    // Fetch file counts
+    if (currentRole === 'organization') {
+      const { data: doctors } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('org_id', currentUser.id);
+
+      if (doctors) {
+        const counts: Record<string, number> = {};
+        for (const dr of doctors) {
+          const { data: files } = await supabase.storage.from('clinical-files').list(dr.id);
           if (files) {
-            const counts: Record<string, number> = {};
             files.forEach(f => {
               const parts = f.name.split('--');
               if (parts.length > 1) {
@@ -89,19 +86,67 @@ const Patients = () => {
                 if (pName) counts[pName] = (counts[pName] || 0) + 1;
               }
             });
-            setFileCounts(counts);
           }
         }
+        setFileCounts(counts);
       }
-      setLoading(false);
+    } else {
+      const { data: files } = await supabase.storage.from('clinical-files').list(currentUser.id);
+      if (files) {
+        const counts: Record<string, number> = {};
+        files.forEach(f => {
+          const parts = f.name.split('--');
+          if (parts.length > 1) {
+            const pName = parts[0].split('_')[0]?.replace(/-/g, ' ');
+            if (pName) counts[pName] = (counts[pName] || 0) + 1;
+          }
+        });
+        setFileCounts(counts);
+      }
+    }
+
+    if (isInitial) setLoading(false);
+  };
+
+  useEffect(() => {
+    // 1. Initial load
+    fetchCases(true);
+
+    // 2. Supabase real-time subscription for instant updates
+    const setupRealtime = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
+      if (!user) return;
+
+      channelRef.current = supabase
+        .channel('cases-changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'cases' },
+          () => {
+            fetchCases(false); // re-fetch silently on any change
+          }
+        )
+        .subscribe();
     };
 
-    fetchCases();
+    setupRealtime();
+
+    // 3. 1-second polling as fallback
+    pollingRef.current = setInterval(() => {
+      fetchCases(false);
+    }, 1000);
+
+    // Cleanup on unmount
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      if (channelRef.current) supabase.removeChannel(channelRef.current);
+    };
   }, []);
 
-  const filteredCases = cases.filter(c => 
+  const filteredCases = cases.filter(c =>
     c.patient_name.toLowerCase().includes(search.toLowerCase()) ||
-    c.tooth_number.toLowerCase().includes(search.toLowerCase())
+    c.tooth_number?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -110,7 +155,7 @@ const Patients = () => {
         <View style={styles.header}>
           <Text style={styles.countText}>{filteredCases.length} cases</Text>
           {role !== "organization" && (
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => navigation.navigate("NewCase")}
               style={styles.addButton}
             >
@@ -124,8 +169,8 @@ const Patients = () => {
           <View style={styles.searchIcon}>
             <Search size={18} color="#94A3B8" />
           </View>
-          <TextInput 
-            placeholder="Search patients, tooth #..." 
+          <TextInput
+            placeholder="Search patients, tooth #..."
             style={styles.searchInput}
             value={search}
             onChangeText={setSearch}
@@ -141,25 +186,19 @@ const Patients = () => {
             </View>
           ) : filteredCases.length > 0 ? (
             filteredCases.map((p) => (
-              <TouchableOpacity 
-                key={p.id} 
+              <TouchableOpacity
+                key={p.id}
                 onPress={() => navigation.navigate("PatientDetail", { id: p.id })}
                 style={styles.caseCard}
               >
-                <View
-                  style={[
-                    styles.avatar,
-                    p.is_urgent ? styles.avatarUrgent : styles.avatarNormal
-                  ]}
-                >
-                  <Text style={[styles.avatarText, p.is_urgent ? styles.avatarTextUrgent : styles.avatarTextNormal]}>
+                <View style={[styles.avatar, styles.avatarNormal]}>
+                  <Text style={[styles.avatarText, styles.avatarTextNormal]}>
                     {p.patient_name ? p.patient_name.charAt(0) : "P"}
                   </Text>
                 </View>
                 <View style={styles.cardContent}>
                   <View style={styles.cardHeader}>
                     <Text style={styles.patientName}>{p.patient_name}</Text>
-                    {p.is_urgent && <AlertCircle size={14} color="#EF4444" />}
                   </View>
                   <View style={styles.dateRow}>
                     <Calendar size={10} color="#94A3B8" />
@@ -179,8 +218,8 @@ const Patients = () => {
                     </View>
                   </View>
                 </View>
-                <View style={[styles.statusBadge, p.is_urgent && styles.statusBadgeUrgent]}>
-                  <Text style={[styles.statusText, p.is_urgent && styles.statusTextUrgent]}>
+                <View style={styles.statusBadge}>
+                  <Text style={styles.statusText}>
                     {p.status.replace('-', ' ')}
                   </Text>
                 </View>
@@ -279,18 +318,12 @@ const styles = StyleSheet.create({
   avatarNormal: {
     backgroundColor: "rgba(14, 165, 233, 0.05)",
   },
-  avatarUrgent: {
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
-  },
   avatarText: {
     fontSize: 16,
     fontWeight: "600",
   },
   avatarTextNormal: {
     color: "#0EA5E9",
-  },
-  avatarTextUrgent: {
-    color: "#EF4444",
   },
   cardContent: {
     flex: 1,
@@ -321,17 +354,6 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
     fontWeight: "500",
   },
-  reportsLink: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 6,
-  },
-  reportsText: {
-    fontSize: 10,
-    fontWeight: "500",
-    color: "#0EA5E9",
-  },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -339,17 +361,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
-  statusBadgeUrgent: {
-    borderColor: "rgba(239, 68, 68, 0.3)",
-    backgroundColor: "rgba(239, 68, 68, 0.05)",
-  },
   statusText: {
     fontSize: 10,
     color: "#64748B",
     textTransform: "capitalize",
-  },
-  statusTextUrgent: {
-    color: "#EF4444",
   },
   emptyState: {
     padding: 40,
@@ -369,9 +384,6 @@ const styles = StyleSheet.create({
     color: "#0EA5E9",
     fontWeight: "600",
     marginTop: 4,
-  },
-  spin: {
-    // spin animation
   },
   cardFooter: {
     flexDirection: "row",
