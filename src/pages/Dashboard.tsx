@@ -18,13 +18,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 
-const actions = [
-  { to: "NewCase", title: "New Case", desc: "Start clinical entry", icon: FilePlus2, color: "#0EA5E9" },
-  { to: "LabRequisition", title: "Lab Request", desc: "Auto-fill from notes", icon: ClipboardList, color: "#8B5CF6" },
-  { to: "AIEngine", title: "AI Guide", desc: "Suggest next step", icon: Sparkles, color: "#F43F5E" },
-  { to: "Patients", title: "Records", desc: "Browse case history", icon: Users, color: "#F59E0B" },
-];
-
 const Dashboard = () => {
   const navigation = useNavigation<any>();
   const { data: preloadedData, isPreloaded } = useAppData();
@@ -38,13 +31,11 @@ const Dashboard = () => {
   const [pendingCount, setPendingCount] = useState(preloadedData.pendingCount);
 
   useEffect(() => {
-    // Set greeting
     const hour = new Date().getHours();
     if (hour < 12) setGreeting("Good morning");
     else if (hour < 17) setGreeting("Good afternoon");
     else setGreeting("Good evening");
 
-    // If we have pre-loaded data, use it immediately
     if (isPreloaded && preloadedData.profile) {
       const userRole = preloadedData.profile.role || 'doctor';
       setRole(userRole);
@@ -66,11 +57,10 @@ const Dashboard = () => {
       return;
     }
 
-    // Fallback: fresh fetch if not pre-loaded (e.g. after manual login)
     const fetchData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user;
-      
+
       if (user) {
         setUserName(user.user_metadata?.full_name || "Doctor");
         const metaRole = user.user_metadata?.role;
@@ -86,18 +76,16 @@ const Dashboard = () => {
         setUserName(profile?.full_name || user.user_metadata?.full_name || "Doctor");
         setOrgName(profile?.org_name || user.user_metadata?.org_name || "");
 
-        // Self-Correction for Doctors
         if (profile && (!profile.full_name || profile.full_name === "Doctor" || profile.full_name === "New User" || !profile.org_name)) {
           const metadata = user.user_metadata;
           const recoveredName = profile.full_name && !["Doctor", "New User", "Dr. User"].includes(profile.full_name) ? profile.full_name : (metadata?.full_name || metadata?.name);
-          const recoveredOrg = profile.org_name || metadata?.org_name || metadata?.organization_name || metadata?.org_id; // org_id as fallback if needed
-          
+          const recoveredOrg = profile.org_name || metadata?.org_name || metadata?.organization_name || metadata?.org_id;
+
           if (recoveredName || recoveredOrg) {
             await supabase.from('profiles').update({
               full_name: recoveredName || profile.full_name,
               org_name: recoveredOrg || profile.org_name
             }).eq('id', user.id);
-            // Update local state
             setUserName(recoveredName || userName);
             setOrgName(recoveredOrg || orgName);
           }
@@ -163,7 +151,7 @@ const Dashboard = () => {
               {stats.active} new cases · {stats.lab} lab requests pending
             </Text>
             <View style={styles.heroActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => navigation.navigate("AIEngine")}
                 style={styles.heroButton}
               >
@@ -175,89 +163,68 @@ const Dashboard = () => {
         </View>
 
         <View style={styles.mainContent}>
-            
-            {/* Stats */}
-            <View style={styles.statsGrid}>
-              {[
-                { label: "New", value: stats.active, color: "#0EA5E9", icon: Activity },
-                { label: "Lab", value: stats.lab, color: "#8B5CF6", icon: ClipboardList },
-                { label: "Checkup", value: stats.checkup, color: "#10B981", icon: Stethoscope },
-              ].map((s) => (
-                <View key={s.label} style={styles.statCard}>
-                  <s.icon size={16} color={s.color} />
-                  <Text style={styles.statValue}>{s.value}</Text>
-                  <Text style={styles.statLabel}>{s.label}</Text>
-                </View>
-              ))}
-            </View>
+          {/* Stats */}
+          <View style={styles.statsGrid}>
+            {[
+              { label: "New", value: stats.active, color: "#0EA5E9", icon: Activity },
+              { label: "Lab", value: stats.lab, color: "#8B5CF6", icon: ClipboardList },
+              { label: "Checkup", value: stats.checkup, color: "#10B981", icon: Stethoscope },
+            ].map((s) => (
+              <View key={s.label} style={styles.statCard}>
+                <s.icon size={16} color={s.color} />
+                <Text style={styles.statValue}>{s.value}</Text>
+                <Text style={styles.statLabel}>{s.label}</Text>
+              </View>
+            ))}
+          </View>
 
-            {/* Quick actions */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Quick actions</Text>
-              <View style={styles.actionsGrid}>
-                {actions.filter(a => role !== 'organization' || (a.to !== 'NewCase' && a.to !== 'LabRequisition')).map((a) => (
-                  <TouchableOpacity 
-                    key={a.title} 
-                    onPress={() => navigation.navigate(a.to)}
-                    style={styles.actionCard}
+          {/* Recent cases */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recent cases</Text>
+              <TouchableOpacity onPress={() => navigation.navigate("Patients")}>
+                <Text style={styles.seeAllText}>See all</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.casesCard}>
+              {recentCases.length > 0 ? (
+                recentCases.map((c, i) => (
+                  <TouchableOpacity
+                    key={c.id}
+                    onPress={() => navigation.navigate("Patients", { screen: "PatientDetail", params: { id: c.id } })}
+                    style={[styles.caseItem, i === recentCases.length - 1 && styles.noBorder]}
                   >
-                    <View style={[styles.actionIcon, { backgroundColor: `${a.color}15` }]}>
-                      <a.icon size={20} color={a.color} />
+                    <View style={[styles.patientAvatar, { backgroundColor: c.urgent ? "#EF444415" : "#0EA5E915" }]}>
+                      <Text style={[styles.avatarText, { color: c.urgent ? "#EF4444" : "#0EA5E9" }]}>
+                        {c.name ? c.name.charAt(0) : "P"}
+                      </Text>
                     </View>
-                    <Text style={styles.actionTitle}>{a.title}</Text>
-                    <Text style={styles.actionDesc}>{a.desc}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Recent cases */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Recent cases</Text>
-                <TouchableOpacity onPress={() => navigation.navigate("Patients")}>
-                  <Text style={styles.seeAllText}>See all</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.casesCard}>
-                {recentCases.length > 0 ? (
-                  recentCases.map((c, i) => (
-                    <TouchableOpacity
-                      key={c.id}
-                      onPress={() => navigation.navigate("Patients", { screen: "PatientDetail", params: { id: c.id } })}
-                      style={[styles.caseItem, i === recentCases.length - 1 && styles.noBorder]}
-                    >
-                      <View style={[styles.patientAvatar, { backgroundColor: c.urgent ? "#EF444415" : "#0EA5E915" }]}>
-                        <Text style={[styles.avatarText, { color: c.urgent ? "#EF4444" : "#0EA5E9" }]}>
-                          {c.name ? c.name.charAt(0) : "P"}
-                        </Text>
-                      </View>
-                      <View style={styles.caseInfo}>
-                        <Text style={styles.patientName}>{c.name}</Text>
-                        <Text style={styles.caseSubtext}>
-                          Tooth {c.tooth} · {c.dx}
-                        </Text>
-                        {c.doctor && (
-                          <Text style={styles.doctorName}>By {c.doctor}</Text>
-                        )}
-                      </View>
-                      {c.urgent ? (
-                        <View style={styles.urgentBadge}>
-                          <Text style={styles.urgentBadgeText}>Urgent</Text>
-                        </View>
-                      ) : (
-                        <ChevronRight size={16} color="#94A3B8" />
+                    <View style={styles.caseInfo}>
+                      <Text style={styles.patientName}>{c.name}</Text>
+                      <Text style={styles.caseSubtext}>
+                        Tooth {c.tooth} · {c.dx}
+                      </Text>
+                      {c.doctor && (
+                        <Text style={styles.doctorName}>By {c.doctor}</Text>
                       )}
-                    </TouchableOpacity>
-                  ))
-                ) : (
-                  <View style={styles.emptyState}>
-                    <Text style={styles.emptyText}>No recent cases found.</Text>
-                    <TouchableOpacity onPress={() => navigation.navigate("NewCase")}>
-                      <Text style={styles.emptyLink}>Create your first case</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
+                    </View>
+                    {c.urgent ? (
+                      <View style={styles.urgentBadge}>
+                        <Text style={styles.urgentBadgeText}>Urgent</Text>
+                      </View>
+                    ) : (
+                      <ChevronRight size={16} color="#94A3B8" />
+                    )}
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyText}>No recent cases found.</Text>
+                  <TouchableOpacity onPress={() => navigation.navigate("NewCase")}>
+                    <Text style={styles.emptyLink}>Create your first case</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -379,37 +346,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
     color: "#0EA5E9",
-  },
-  actionsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  actionCard: {
-    width: (Dimensions.get("window").width - 44) / 2,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "rgba(226, 232, 240, 0.6)",
-  },
-  actionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-  actionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#0F172A",
-  },
-  actionDesc: {
-    fontSize: 12,
-    color: "#64748B",
-    marginTop: 2,
   },
   casesCard: {
     backgroundColor: "#FFFFFF",
