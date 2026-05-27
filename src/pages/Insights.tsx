@@ -1,12 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import {
   BarChart3,
-  TrendingUp,
-  Sparkles,
   Clock,
   Activity,
-  ChevronRight,
   Target
 } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
@@ -18,7 +15,6 @@ const Insights = () => {
     total: 0,
     active: 0,
     completed: 0,
-    urgent: 0
   });
 
   React.useEffect(() => {
@@ -34,7 +30,7 @@ const Insights = () => {
 
       const role = profile?.role || 'doctor';
 
-      let query = supabase.from('cases').select('status, is_urgent');
+      let query = supabase.from('cases').select('status');
       if (role === 'organization') {
         query = query.eq('org_id', user.id);
       } else {
@@ -48,7 +44,6 @@ const Insights = () => {
           total: data.length,
           active: data.filter(c => c.status === 'active' || c.status === 'in-progress').length,
           completed: data.filter(c => c.status === 'completed').length,
-          urgent: data.filter(c => c.is_urgent).length
         });
       }
       setLoading(false);
@@ -61,7 +56,6 @@ const Insights = () => {
     { label: "Total Cases", value: metrics.total.toString(), icon: Activity, color: "#0EA5E9" },
     { label: "Active Cases", value: metrics.active.toString(), icon: Clock, color: "#8B5CF6" },
     { label: "Completed Cases", value: metrics.completed.toString(), icon: Target, color: "#10B981" },
-    { label: "Urgent Cases", value: metrics.urgent.toString(), icon: Sparkles, color: "#EF4444" },
   ];
 
   return (
@@ -73,7 +67,6 @@ const Insights = () => {
             <Text style={styles.title}>Clinical Insights</Text>
             <Text style={styles.subtitle}>Your practice performance & AI impact</Text>
           </View>
-
         </View>
 
         <View style={styles.statsGrid}>
@@ -108,8 +101,6 @@ const Insights = () => {
   );
 };
 
-
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -134,7 +125,6 @@ const styles = StyleSheet.create({
     color: "#64748B",
     marginTop: 4,
   },
-
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -167,7 +157,6 @@ const styles = StyleSheet.create({
     color: "#64748B",
     marginTop: 4,
   },
-
   heroCard: {
     backgroundColor: "#0EA5E9",
     borderRadius: 24,
@@ -210,7 +199,6 @@ const styles = StyleSheet.create({
     bottom: -20,
     zIndex: 1,
   },
-
 });
 
 export default Insights;
