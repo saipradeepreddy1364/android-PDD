@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Alert, Platform } from "react-native";
 import { Search, Loader2, ClipboardList, CheckCircle2, FlaskConical, Calendar, ArrowRight, Sparkles, User, FileText, Download } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
@@ -11,7 +11,7 @@ const LabDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
-  const fetchLabCases = async () => {
+  const fetchLabCases = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -41,12 +41,17 @@ const LabDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchLabCases();
 
-    // Set up subscription for real-time updates
+    // Add polling since Supabase replication might not be enabled
+    const pollInterval = setInterval(() => {
+      fetchLabCases();
+    }, 3000);
+
+    // Also set up Supabase Realtime subscription as an additional trigger
     let channel: any;
 
     const setupSubscription = async () => {
@@ -61,7 +66,7 @@ const LabDashboard = () => {
 
       if (prof?.org_id) {
         channel = supabase
-          .channel('lab-cases-realtime')
+          .channel(`lab-cases-realtime-${Date.now()}`)
           .on(
             'postgres_changes',
             {
@@ -81,9 +86,10 @@ const LabDashboard = () => {
     setupSubscription();
 
     return () => {
+      clearInterval(pollInterval);
       if (channel) supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchLabCases]);
 
   const handleUpdateStatus = async (caseId: string, nextStatus: string) => {
     try {

@@ -36,8 +36,13 @@ type DatasetStep = {
   id: string;
   order: number;
   name: string;
+  description: string;
   component: string;
-  cost: number;
+  brand: string;
+  teeth: string;
+  cost: string;
+  is_final: boolean;
+  next_steps: string[];
 };
 
 type DatasetProcedure = {
@@ -248,8 +253,10 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
         const allSteps: RecommendedStep[] = selectedProcedure.steps.map((s, i) => ({
           id: s.id,
           name: `Step ${s.order}: ${s.name}`,
-          score: 1 - (i * 0.05), // descending score
+          score: 1 - (i * 0.05),
           reasons: [`Component: ${s.component}`, `Cost: ₹${s.cost}`],
+          component: s.component,
+          order: s.order,
         }));
         setDatasetSteps(allSteps);
       }
@@ -324,7 +331,7 @@ You MUST return ONLY a valid JSON object with the exact following structure, no 
                 </TouchableOpacity>
               </View>
               <ScrollView>
-                {(diasDataset.procedures as DatasetProcedure[]).map((p) => (
+                {(diasDataset.procedures as unknown as DatasetProcedure[]).map((p) => (
                   <TouchableOpacity
                     key={p.id}
                     style={styles.casePickerItem}
