@@ -49,7 +49,7 @@ const LabDashboard = () => {
     // Add polling since Supabase replication might not be enabled
     const pollInterval = setInterval(() => {
       fetchLabCases();
-    }, 3000);
+    }, 1000);
 
     // Also set up Supabase Realtime subscription as an additional trigger
     let channel: any;
