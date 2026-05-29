@@ -1,13 +1,16 @@
 import { useEffect } from 'react';
 import { DeviceEventEmitter } from 'react-native';
 import { supabase } from '@/lib/supabase';
-import { sendLocalNotification } from '@/lib/notifications';
+import { sendLocalNotification, registerForPushNotificationsAsync } from '@/lib/notifications';
 
 export const useNotifications = () => {
   useEffect(() => {
     let cleanupFn: (() => void) | undefined;
 
     const setupRealtime = async () => {
+      // Request notification permission as early as possible
+      await registerForPushNotificationsAsync();
+
       // Use getSession() — no auth lock contention unlike getUser()
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;

@@ -193,6 +193,24 @@ const OrgDashboard = () => {
           </View>
         </View>
 
+        {pendingCount > 0 && (
+          <TouchableOpacity 
+            style={styles.approvalAlert}
+            onPress={() => navigation.navigate("ApprovalCenter")}
+          >
+            <View style={styles.alertIconBox}>
+              <UserCheck size={20} color="#FFFFFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.alertTitle}>Pending Clinical Approvals</Text>
+              <Text style={styles.alertSubtitle}>
+                You have {pendingCount} new {pendingCount === 1 ? 'request' : 'requests'} waiting for your approval.
+              </Text>
+            </View>
+            <ChevronRight size={16} color="#0EA5E9" />
+          </TouchableOpacity>
+        )}
+
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Clinical Overview</Text>
           <Text style={styles.subtext}>Monitor activity across all {doctors.length} departments.</Text>
