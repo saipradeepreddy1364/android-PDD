@@ -59,6 +59,8 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const insets = useSafeAreaInsets();
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
   const [orgUserId, setOrgUserId] = useState<string | null>(null);
+  const [pendingLabCount, setPendingLabCount] = useState(0);
+  const [labOrgId, setLabOrgId] = useState<string | null>(null);
   
   useNotifications();
 
@@ -70,21 +72,28 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
   const fetchPendingCount = React.useCallback(async (userId?: string) => {
     if (role !== "organization") return;
-    // Use cached userId or the one passed in — avoids getUser() lock on every tick
     const uid = userId || orgUserId;
     if (!uid) return;
-
     const { count, error } = await supabase
       .from('profiles')
       .select('*', { count: 'exact', head: true })
       .eq('org_id', uid)
       .eq('role', 'doctor')
       .eq('status', 'pending');
-
-    if (!error && count !== null) {
-      setPendingApprovalsCount(count);
-    }
+    if (!error && count !== null) setPendingApprovalsCount(count);
   }, [role, orgUserId]);
+
+  const fetchLabPendingCount = React.useCallback(async (orgId?: string) => {
+    if (role !== 'lab') return;
+    const oid = orgId || labOrgId;
+    if (!oid) return;
+    const { count, error } = await supabase
+      .from('cases')
+      .select('*', { count: 'exact', head: true })
+      .eq('org_id', oid)
+      .eq('status', 'lab-pending');
+    if (!error && count !== null) setPendingLabCount(count);
+  }, [role, labOrgId]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -92,36 +101,54 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     }, [role])
   );
 
+  // ── Org approvals bell ───────────────────────────────────────────────────
   useEffect(() => {
     if (role !== "organization" || !orgUserId) {
       setPendingApprovalsCount(0);
       return;
     }
-
     fetchPendingCount(orgUserId);
-
-    // Poll every 1 second — realtime channel handles instant updates
-    const pollInterval = setInterval(() => fetchPendingCount(orgUserId), 1000);
-
+    const pollInterval = setInterval(() => fetchPendingCount(orgUserId), 5000);
     const realtimeSub = supabase
       .channel(`app-layout-approvals-${Date.now()}`)
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
         table: 'profiles'
-      }, () => {
-        fetchPendingCount(orgUserId);
-      })
+      }, () => fetchPendingCount(orgUserId))
       .subscribe();
-
     const eventSub = DeviceEventEmitter.addListener('refreshPendingCount', () => fetchPendingCount(orgUserId));
-
     return () => {
       supabase.removeChannel(realtimeSub);
       eventSub.remove();
       clearInterval(pollInterval);
     };
   }, [role, orgUserId]);
+
+  // ── Lab requisitions bell ────────────────────────────────────────────────
+  useEffect(() => {
+    if (role !== 'lab' || !labOrgId) {
+      setPendingLabCount(0);
+      return;
+    }
+    fetchLabPendingCount(labOrgId);
+    const pollInterval = setInterval(() => fetchLabPendingCount(labOrgId), 5000);
+    const realtimeSub = supabase
+      .channel(`app-layout-lab-${Date.now()}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'cases',
+        filter: `org_id=eq.${labOrgId}`,
+      }, () => fetchLabPendingCount(labOrgId))
+      .subscribe();
+    const eventSub = DeviceEventEmitter.addListener('refreshLabCount', () => fetchLabPendingCount(labOrgId));
+    return () => {
+      supabase.removeChannel(realtimeSub);
+      eventSub.remove();
+      clearInterval(pollInterval);
+    };
+  }, [role, labOrgId]);
 
   useEffect(() => {
     let authListener: any;
@@ -131,11 +158,18 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         navigation.navigate("Login");
         return;
       }
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, org_id')
+        .eq('id', session.user.id)
+        .single();
       if (profile) {
         setRole(profile.role);
         if (profile.role === 'organization') {
           setOrgUserId(session.user.id);
+        }
+        if (profile.role === 'lab') {
+          setLabOrgId(profile.org_id || session.user.id);
         }
       }
     };
@@ -226,6 +260,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                 {role === "organization" && pendingApprovalsCount > 0 && (
                   <View style={styles.orangeDot} />
                 )}
+                {role === "lab" && pendingLabCount > 0 && (
+                  <View style={[styles.orangeDot, { backgroundColor: '#16A34A' }]} />
+                )}
               </TouchableOpacity>
               <TouchableOpacity onPress={toggle} style={styles.iconButton}>
                 {isDark ? <Sun size={20} color="#94A3B8" /> : <Moon size={20} color="#64748B" />}
@@ -250,6 +287,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                 <Bell size={20} color={isDark ? "#FFF" : "#000"} />
                 {role === "organization" && pendingApprovalsCount > 0 && (
                   <View style={styles.orangeDotMobileHeader} />
+                )}
+                {role === "lab" && pendingLabCount > 0 && (
+                  <View style={[styles.orangeDotMobileHeader, { backgroundColor: '#16A34A' }]} />
                 )}
               </TouchableOpacity>
               <TouchableOpacity onPress={handleLogout}>

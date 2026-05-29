@@ -23,18 +23,19 @@ type CaseNotification = {
   time: string;
 };
 
-type UserRole = "organization" | "doctor" | null;
+type UserRole = "organization" | "doctor" | "lab" | null;
 
 export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => {
   const [pendingDoctors, setPendingDoctors] = useState<PendingDoctor[]>([]);
   const [caseNotifs, setCaseNotifs] = useState<CaseNotification[]>([]);
+  const [labPendingCases, setLabPendingCases] = useState<any[]>([]);
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
   // Cache session to avoid repeated getUser() calls
-  const sessionRef = useRef<{ userId: string; role: UserRole } | null>(null);
+  const sessionRef = useRef<{ userId: string; role: UserRole; orgId: string } | null>(null);
 
   const loadSession = async () => {
     if (sessionRef.current) return sessionRef.current;
@@ -42,10 +43,16 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
     if (!session) return null;
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, org_id')
       .eq('id', session.user.id)
       .single();
-    const result = { userId: session.user.id, role: (profile?.role ?? null) as UserRole };
+    const result = {
+      userId: session.user.id,
+      role: (profile?.role ?? null) as UserRole,
+      // For org users, their own userId IS their org_id.
+      // For lab/doctor users, org_id points to their parent org.
+      orgId: (profile?.role === 'organization' ? session.user.id : profile?.org_id) ?? session.user.id,
+    };
     sessionRef.current = result;
     return result;
   };
@@ -66,6 +73,19 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
         .order('created_at', { ascending: false });
 
       if (doctors) setPendingDoctors(doctors);
+
+    } else if (sess.role === 'lab') {
+      // Fetch pending lab requisitions for this lab's org
+      const { data: labCases } = await supabase
+        .from('cases')
+        .select('id, patient_name, tooth_number, diagnosis, doctor_name, created_at, is_urgent')
+        .eq('org_id', sess.orgId)
+        .eq('status', 'lab-pending')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (labCases) setLabPendingCases(labCases);
+
     } else if (sess.role === 'doctor') {
       // Fetch recent case updates for doctors
       const { data: cases } = await supabase
@@ -78,9 +98,9 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
       if (cases) {
         const mapped: CaseNotification[] = cases.map(c => ({
           id: c.id,
-          title: c.is_urgent ? "🚨 Urgent Case" : "Case Assigned",
+          title: c.is_urgent ? '🚨 Urgent Case' : 'Case Assigned',
           message: `${c.patient_name}: Tooth ${c.tooth_number} — ${c.diagnosis}`,
-          type: c.is_urgent ? "urgent" : "info",
+          type: c.is_urgent ? 'urgent' : 'info',
           time: new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         }));
         setCaseNotifs(mapped);
@@ -95,8 +115,8 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
     sessionRef.current = null;
     fetchData();
 
-    // Poll every 1s while open — realtime handles instant updates
-    const pollInterval = setInterval(fetchData, 1000);
+    // Poll every 5s while open — realtime handles instant updates
+    const pollInterval = setInterval(fetchData, 5000);
 
     const channel = supabase
       .channel('sidebar-realtime-' + Date.now())
@@ -104,9 +124,13 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cases' }, fetchData)
       .subscribe();
 
+    // Also refresh when LabDashboard emits a lab count refresh signal
+    const labSub = DeviceEventEmitter.addListener('refreshLabCount', fetchData);
+
     return () => {
       supabase.removeChannel(channel);
       clearInterval(pollInterval);
+      labSub.remove();
     };
   }, [open]);
 
@@ -137,6 +161,23 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
     }
   };
 
+  const handleAcceptLabCase = async (caseId: string) => {
+    // Optimistic removal from pending list
+    setLabPendingCases(prev => prev.filter(c => c.id !== caseId));
+    try {
+      const { error } = await supabase
+        .from('cases')
+        .update({ status: 'lab-received' })
+        .eq('id', caseId);
+      if (error) throw error;
+      DeviceEventEmitter.emit('refreshLabCases');
+      DeviceEventEmitter.emit('refreshLabCount');
+    } catch (err: any) {
+      fetchData();
+      Alert.alert('Error', 'Failed to accept lab case: ' + err.message);
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "N/A";
     const d = new Date(dateStr);
@@ -151,7 +192,7 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
     return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
   };
 
-  const totalCount = pendingDoctors.length + caseNotifs.length;
+  const totalCount = pendingDoctors.length + caseNotifs.length + labPendingCases.length;
 
   return (
     <SheetContent open={open} onOpenChange={onOpenChange} side="right" style={[styles.sheetContent, isDark && styles.sheetContentDark]}>
@@ -176,7 +217,7 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
       <ScrollView style={styles.list} showsVerticalScrollIndicator={false} contentContainerStyle={totalCount === 0 && { flex: 1 }}>
         {totalCount > 0 ? (
           <>
-            {/* Pending Doctor Approvals */}
+            {/* Pending Doctor Approvals (org role) */}
             {pendingDoctors.length > 0 && (
               <>
                 <View style={[styles.sectionLabel, isDark && styles.sectionLabelDark]}>
@@ -263,6 +304,51 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
               </>
             )}
 
+            {/* Pending Lab Requisitions (lab role) */}
+            {labPendingCases.length > 0 && (
+              <>
+                <View style={[styles.sectionLabel, isDark && styles.sectionLabelDark]}>
+                  <Text style={[styles.sectionLabelText, isDark && styles.sectionLabelTextDark]}>
+                    PENDING LAB REQUISITIONS · {labPendingCases.length}
+                  </Text>
+                </View>
+                {labPendingCases.map((c) => (
+                  <View key={c.id} style={[styles.doctorCard, isDark && styles.doctorCardDark, { backgroundColor: isDark ? '#0A1A1A' : '#F0FDF4' }]}>
+                    <View style={styles.doctorTopRow}>
+                      <View style={[styles.avatar, { backgroundColor: '#DCFCE7', borderColor: '#4ADE80' }]}>
+                        <Text style={[styles.avatarText, { color: '#16A34A' }]}>
+                          {c.patient_name?.charAt(0)?.toUpperCase() || 'P'}
+                        </Text>
+                      </View>
+                      <View style={styles.doctorInfo}>
+                        <Text style={[styles.doctorName, isDark && styles.doctorNameDark]} numberOfLines={1}>
+                          {c.patient_name}
+                          {c.is_urgent && <Text style={{ color: '#EF4444' }}> · URGENT</Text>}
+                        </Text>
+                        <Text style={styles.requestedAt}>
+                          Tooth #{c.tooth_number} · {formatDate(c.created_at)}
+                        </Text>
+                      </View>
+                    </View>
+                    {c.diagnosis ? (
+                      <Text style={[styles.detailText, { paddingLeft: 2 }]} numberOfLines={2}>
+                        {c.diagnosis}
+                      </Text>
+                    ) : null}
+                    <View style={styles.actionRow}>
+                      <TouchableOpacity
+                        style={[styles.approveBtn, { backgroundColor: '#16A34A' }]}
+                        onPress={() => handleAcceptLabCase(c.id)}
+                      >
+                        <CheckCircle2 size={13} color="#FFFFFF" />
+                        <Text style={styles.approveBtnText}>Accept &amp; Begin</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </>
+            )}
+
             {/* Case notifications (doctors) */}
             {caseNotifs.length > 0 && (
               <>
@@ -298,6 +384,8 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
             <Text style={[styles.emptyText, isDark && styles.emptyTextDark]}>
               {userRole === "organization"
                 ? "No pending doctor approvals. New requests will appear here automatically."
+                : userRole === "lab"
+                ? "No pending lab requisitions. New requests will appear here in real time."
                 : "No new case updates. Your realtime notification center is active."}
             </Text>
           </View>

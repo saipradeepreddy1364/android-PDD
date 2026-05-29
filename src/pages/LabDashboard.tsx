@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Alert, Platform } from "react-native";
-import { Search, Loader2, ClipboardList, CheckCircle2, FlaskConical, Calendar, ArrowRight, Sparkles, User, FileText, Download } from "lucide-react-native";
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Alert, Platform, DeviceEventEmitter } from "react-native";
+import { Search, Loader2, ClipboardList, CheckCircle2, FlaskConical, Calendar, ArrowRight } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 
@@ -11,30 +11,36 @@ const LabDashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
+  // Cache auth info so we never call getUser() inside a polling interval
+  const cachedAuth = useRef<{ orgId: string } | null>(null);
+
   const fetchLabCases = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      // Only resolve user+profile once; reuse cached value on subsequent polls
+      if (!cachedAuth.current) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
 
-      const { data: prof } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (prof) {
-        setProfile(prof);
-
-        const { data, error } = await supabase
-          .from('cases')
+        const { data: prof } = await supabase
+          .from('profiles')
           .select('*')
-          .eq('org_id', prof.org_id)
-          .in('status', ['lab-pending', 'lab-received', 'completed'])
-          .order('created_at', { ascending: false });
+          .eq('id', session.user.id)
+          .single();
 
-        if (!error && data) {
-          setCases(data);
-        }
+        const orgId = prof?.org_id || session.user.id;
+        cachedAuth.current = { orgId };
+        setProfile(prof);
+      }
+
+      const { data, error } = await supabase
+        .from('cases')
+        .select('*')
+        .eq('org_id', cachedAuth.current.orgId)
+        .in('status', ['lab-pending', 'lab-received', 'completed'])
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setCases(data);
       }
     } catch (err) {
       console.error("Error fetching lab cases:", err);
@@ -46,47 +52,49 @@ const LabDashboard = () => {
   useEffect(() => {
     fetchLabCases();
 
-    // Add polling since Supabase replication might not be enabled
+    // Realtime channel handles instant updates; 5-second poll is the reliable fallback.
+    // 1-second polling was hitting Supabase auth rate limits (getUser on every tick).
     const pollInterval = setInterval(() => {
       fetchLabCases();
-    }, 1000);
+    }, 5000);
+
+    // Also refresh on DeviceEventEmitter signal (from notification sidebar actions)
+    const eventSub = DeviceEventEmitter.addListener('refreshLabCases', fetchLabCases);
 
     // Also set up Supabase Realtime subscription as an additional trigger
     let channel: any;
 
     const setupSubscription = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: prof } = await supabase
-        .from('profiles')
-        .select('org_id')
-        .eq('id', user.id)
-        .single();
-
-      if (prof?.org_id) {
-        channel = supabase
-          .channel(`lab-cases-realtime-${Date.now()}`)
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table: 'cases',
-              filter: `org_id=eq.${prof.org_id}`
-            },
-            () => {
-              fetchLabCases();
-            }
-          )
-          .subscribe();
+      // Reuse cached auth if available, otherwise resolve once
+      if (!cachedAuth.current) {
+        await fetchLabCases();
       }
+      if (!cachedAuth.current) return;
+
+      channel = supabase
+        .channel(`lab-cases-realtime-${Date.now()}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'cases',
+            filter: `org_id=eq.${cachedAuth.current.orgId}`,
+          },
+          () => {
+            fetchLabCases();
+            // Notify AppLayout bell badge to refresh
+            DeviceEventEmitter.emit('refreshLabCount');
+          }
+        )
+        .subscribe();
     };
 
     setupSubscription();
 
     return () => {
       clearInterval(pollInterval);
+      eventSub.remove();
       if (channel) supabase.removeChannel(channel);
     };
   }, [fetchLabCases]);

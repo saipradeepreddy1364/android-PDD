@@ -27,11 +27,12 @@ const LabInsights = () => {
         .eq('id', user.id)
         .single();
 
-      if (profile?.org_id) {
+      const orgId = profile?.org_id || user.id;
+      if (orgId) {
         const { data: allCases, error } = await supabase
           .from('cases')
           .select('*')
-          .eq('org_id', profile.org_id)
+          .eq('org_id', orgId)
           .in('status', ['lab-pending', 'lab-received', 'completed']);
 
         if (!error && allCases) {

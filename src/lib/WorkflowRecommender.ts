@@ -1,108 +1,58 @@
-import { supabase } from "./supabase";
-import diasWorkflow from "../data/dias_lab_workflow.json";
+import { fetchProcedures, fetchWorkflow } from "./backendApi";
+import type { WorkflowStep } from "./backendApi";
 
 export interface RecommendedStep {
-  id: string;
-  name: string;
-  component: string;
-  order: number;
-  score: number;
-  reasons: string[];
+  stepNumber: number;
+  currentStep: string;
+  nextStep: string;
+  currentDescription: string;
+  nextDescription: string;
+  confidence: number;
+  source: string;
 }
 
 export class WorkflowRecommender {
-  private static WEIGHT_CONTENT = 0.7;
-  private static WEIGHT_COLLABORATIVE = 0.3;
+  /**
+   * Fetches all available procedure names and their subtypes from the backend.
+   * Returns a map of { procedureName: string[] }.
+   */
+  static async getProceduresMap(): Promise<Record<string, string[]>> {
+    return fetchProcedures();
+  }
 
   /**
-   * Recommends next steps based on the current step selection and case context.
+   * Fetches the complete ordered workflow for a given procedure + subtype.
+   * Returns an array of step transition objects.
    */
-  static async recommendNextSteps(
-    procedureId: string,
-    currentStepId: string,
-    caseContext: { diagnosis: string; patientId?: string }
+  static async getWorkflow(
+    procedure: string,
+    subtype: string
   ): Promise<RecommendedStep[]> {
-    const procedure = diasWorkflow.procedures.find((p: any) => p.id === procedureId);
-    if (!procedure) return [];
+    const result = await fetchWorkflow(procedure, subtype);
+    return result.workflow.map((s: WorkflowStep) => ({
+      stepNumber: s.step_number,
+      currentStep: s.current_step,
+      nextStep: s.next_step,
+      currentDescription: s.current_description,
+      nextDescription: s.next_description,
+      confidence: s.confidence,
+      source: s.source,
+    }));
+  }
 
-    const currentStep = procedure.steps.find((s: any) => s.id === currentStepId);
-    if (!currentStep) return [];
-
-    // 1. Candidate Generation (from JSON next_steps)
-    const candidates = procedure.steps.filter((s: any) => 
-      currentStep.next_steps.includes(s.id)
+  /**
+   * Fetches only the top recommended next step for a given procedure, subtype,
+   * and current step name. Finds the matching step entry in the workflow.
+   */
+  static async recommendNextStep(
+    procedure: string,
+    subtype: string,
+    currentStepName: string
+  ): Promise<RecommendedStep | null> {
+    const steps = await this.getWorkflow(procedure, subtype);
+    const match = steps.find(
+      (s) => s.currentStep.toLowerCase() === currentStepName.toLowerCase()
     );
-
-    // If no explicit next steps in JSON, consider all steps with higher order as potential candidates
-    if (candidates.length === 0) {
-      candidates.push(...procedure.steps.filter((s: any) => s.order > currentStep.order));
-    }
-
-    const recommendations: RecommendedStep[] = [];
-
-    // 2. Scoring
-    for (const step of candidates) {
-      const cbScore = this.calculateContentScore(step, caseContext.diagnosis);
-      const cfScore = await this.calculateCollaborativeScore(step, procedureId);
-
-      const totalScore = (cbScore * this.WEIGHT_CONTENT) + (cfScore * this.WEIGHT_COLLABORATIVE);
-
-      const reasons: string[] = [];
-      if (cbScore > 0.5) reasons.push("Strong match with patient diagnosis");
-      if (cfScore > 0.5) reasons.push("Frequently chosen in similar workflows");
-      if (step.is_final) reasons.push("Completes this workflow category");
-
-      recommendations.push({
-        id: step.id,
-        name: step.name,
-        component: step.component,
-        order: step.order,
-        score: totalScore,
-        reasons: reasons,
-      });
-    }
-
-    // 3. Re-ranking (Sort by score descending)
-    return recommendations.sort((a, b) => b.score - a.score);
-  }
-
-  /**
-   * Simple Jaccard similarity/Keyword matching
-   */
-  private static calculateContentScore(step: any, diagnosis: string): number {
-    if (!diagnosis) return 0.5; // Neutral if no diagnosis
-
-    const stepText = `${step.name} ${step.component} ${step.brand}`.toLowerCase();
-    const dxTerms = diagnosis.toLowerCase().split(/\s+/);
-    
-    let matches = 0;
-    dxTerms.forEach(term => {
-      if (term.length > 3 && stepText.includes(term)) matches++;
-    });
-
-    return Math.min(1, matches / (dxTerms.length || 1) + 0.2); // Base score of 0.2 if part of workflow
-  }
-
-  /**
-   * Simulated Collaborative Filtering
-   * In a real system, this would query a 'workflow_transitions' table or aggregate 'cases'
-   */
-  private static async calculateCollaborativeScore(step: any, procedureId: string): Promise<number> {
-    try {
-      // Mocking collaborative data based on common dental patterns
-      // In production, we would use: 
-      // await supabase.from('case_steps').select('count()').eq('step_id', step.id)
-      
-      const commonPatterns: Record<string, number> = {
-        "IMP-": 0.8, // Implants are common
-        "CPD-": 0.6, // Dentures are frequent
-        "TC-": 0.4,  // Coping is niche
-      };
-
-      const prefix = step.id.split('-')[0] + '-';
-      return commonPatterns[prefix] || 0.5;
-    } catch (e) {
-      return 0.5;
-    }
+    return match ?? null;
   }
 }
