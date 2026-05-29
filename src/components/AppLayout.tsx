@@ -78,7 +78,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       .from('profiles')
       .select('*', { count: 'exact', head: true })
       .eq('org_id', uid)
-      .eq('role', 'doctor')
+      .in('role', ['doctor', 'lab'])
       .eq('status', 'pending');
     if (!error && count !== null) setPendingApprovalsCount(count);
   }, [role, orgUserId]);

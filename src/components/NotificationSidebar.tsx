@@ -13,6 +13,7 @@ type PendingDoctor = {
   specialization?: string;
   created_at: string;
   org_name?: string;
+  role?: string;
 };
 
 type CaseNotification = {
@@ -63,12 +64,12 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
     setUserRole(sess.role);
 
     if (sess.role === 'organization') {
-      // Fetch full doctor details for pending approvals
+      // Fetch full doctor and lab details for pending approvals
       const { data: doctors } = await supabase
         .from('profiles')
-        .select('id, full_name, email, phone, specialization, created_at, org_name')
+        .select('id, full_name, email, phone, specialization, created_at, org_name, role')
         .eq('org_id', sess.userId)
-        .eq('role', 'doctor')
+        .in('role', ['doctor', 'lab'])
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
@@ -239,7 +240,7 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
                         </View>
                         <View style={styles.doctorInfo}>
                           <Text style={[styles.doctorName, isDark && styles.doctorNameDark]} numberOfLines={1}>
-                            {doc.full_name || "Unknown Doctor"}
+                            {doc.full_name || "Unknown"} {doc.role === 'lab' ? '🔬 (Lab)' : '🩺 (Doctor)'}
                           </Text>
                           <Text style={styles.requestedAt}>Requested {formatDate(doc.created_at)}</Text>
                         </View>

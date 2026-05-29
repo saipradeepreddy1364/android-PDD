@@ -33,7 +33,7 @@ export const useNotifications = () => {
           .from('profiles')
           .select('id')
           .eq('org_id', userId)
-          .eq('role', 'doctor')
+          .in('role', ['doctor', 'lab'])
           .eq('status', 'pending');
         if (initialPending) {
           lastPendingIds = new Set(initialPending.map((d: any) => d.id));
@@ -42,9 +42,9 @@ export const useNotifications = () => {
         const checkPendingApprovals = async () => {
           const { data: pendingDoctors } = await supabase
             .from('profiles')
-            .select('id, full_name')
+            .select('id, full_name, role')
             .eq('org_id', userId)
-            .eq('role', 'doctor')
+            .in('role', ['doctor', 'lab'])
             .eq('status', 'pending');
 
           if (pendingDoctors) {
@@ -52,12 +52,14 @@ export const useNotifications = () => {
             for (const doc of pendingDoctors) {
               if (!lastPendingIds.has(doc.id)) {
                 try {
-                  await sendLocalNotification(
-                    '👨‍⚕️ New Doctor Access Request',
-                    `${doc.full_name || 'A doctor'} has requested approval to join your organization.`
-                  );
+                  const isLab = doc.role === 'lab';
+                  const title = isLab ? '🔬 New Lab Access Request' : '👨‍⚕️ New Doctor Access Request';
+                  const message = isLab
+                    ? `${doc.full_name || 'A lab'} has requested approval to join your organization.`
+                    : `${doc.full_name || 'A doctor'} has requested approval to join your organization.`;
+                  await sendLocalNotification(title, message);
                 } catch {
-                  console.log('Push Notification: New Doctor Access Request', doc.full_name);
+                  console.log('Push Notification: New Access Request', doc.full_name);
                 }
                 DeviceEventEmitter.emit('refreshPendingCount');
               }
