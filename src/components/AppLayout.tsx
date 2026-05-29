@@ -108,7 +108,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       return;
     }
     fetchPendingCount(orgUserId);
-    const pollInterval = setInterval(() => fetchPendingCount(orgUserId), 5000);
+    const pollInterval = setInterval(() => fetchPendingCount(orgUserId), 1000);
     const realtimeSub = supabase
       .channel(`app-layout-approvals-${Date.now()}`)
       .on('postgres_changes', { 
@@ -132,7 +132,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       return;
     }
     fetchLabPendingCount(labOrgId);
-    const pollInterval = setInterval(() => fetchLabPendingCount(labOrgId), 5000);
+    const pollInterval = setInterval(() => fetchLabPendingCount(labOrgId), 1000);
     const realtimeSub = supabase
       .channel(`app-layout-lab-${Date.now()}`)
       .on('postgres_changes', {

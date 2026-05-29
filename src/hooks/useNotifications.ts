@@ -71,8 +71,8 @@ export const useNotifications = () => {
           }
         };
 
-        // Poll every 5s as reliable fallback — realtime handles instant updates
-        const pollInterval = setInterval(checkPendingApprovals, 5000);
+        // Poll every 1s as reliable fallback — realtime handles instant updates
+        const pollInterval = setInterval(checkPendingApprovals, 1000);
 
         const channel = supabase
           .channel('org-approval-notifications-' + Date.now())
@@ -131,8 +131,8 @@ export const useNotifications = () => {
           }
         };
 
-        // Poll every 5s as fallback
-        const pollInterval = setInterval(checkNewLabRequests, 5000);
+        // Poll every 1s as fallback
+        const pollInterval = setInterval(checkNewLabRequests, 1000);
 
         const channel = supabase
           .channel('lab-case-notifications-' + Date.now())

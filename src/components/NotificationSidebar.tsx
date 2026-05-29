@@ -116,8 +116,8 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
     sessionRef.current = null;
     fetchData();
 
-    // Poll every 5s while open — realtime handles instant updates
-    const pollInterval = setInterval(fetchData, 5000);
+    // Poll every 1s while open — realtime handles instant updates
+    const pollInterval = setInterval(fetchData, 1000);
 
     const channel = supabase
       .channel('sidebar-realtime-' + Date.now())
