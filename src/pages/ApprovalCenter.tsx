@@ -60,7 +60,12 @@ const ApprovalCenter = () => {
   useEffect(() => {
     fetchDoctors();
 
-    // Subscribe to profile changes for this org
+    // 1. Setup background polling (fallback for when realtime replication is disabled)
+    const pollInterval = setInterval(() => {
+      fetchDoctors();
+    }, 3000);
+
+    // 2. Subscribe to profile changes for this org (realtime instant updates)
     const subscription = supabase
       .channel(`approval-updates-${Date.now()}`)
       .on('postgres_changes', { 
@@ -74,6 +79,7 @@ const ApprovalCenter = () => {
 
     return () => {
       supabase.removeChannel(subscription);
+      clearInterval(pollInterval);
     };
   }, []);
 
