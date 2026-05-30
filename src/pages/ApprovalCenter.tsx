@@ -63,7 +63,7 @@ const ApprovalCenter = () => {
     // 1. Setup background polling (fallback for when realtime replication is disabled)
     const pollInterval = setInterval(() => {
       fetchDoctors();
-    }, 3000);
+    }, 1000);
 
     // 2. Subscribe to profile changes for this org (realtime instant updates)
     const subscription = supabase
