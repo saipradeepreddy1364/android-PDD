@@ -121,9 +121,14 @@ const PatientDetail = () => {
     );
   }
 
-  const handleFileUpload = async () => {
+  // NOTE: This function must NOT be async — iOS Safari only allows opening the
+  // file picker synchronously within a direct user-gesture (tap) event.
+  // Making it async would break the synchronous execution context and iOS would
+  // silently block the picker, causing "failed to fetch" errors.
+  const handleFileUpload = () => {
     if (Platform.OS === 'web') {
-      // Web: use a hidden file input
+      // Web (desktop + mobile browsers/PWA): use a hidden file input.
+      // input.click() must be called synchronously — so this function is NOT async.
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = '*/*';
@@ -135,24 +140,31 @@ const PatientDetail = () => {
       };
       input.click();
     } else {
-      // Mobile: dynamically import expo-document-picker to avoid Vite bundling issues
-      try {
-        const DocumentPicker = await import('expo-document-picker');
-        const result = await DocumentPicker.getDocumentAsync({
-          type: '*/*',
-          copyToCacheDirectory: true,
-        });
+      // Native Expo (iOS/Android): dynamically import expo-document-picker.
+      // Wrapped in an IIFE since we can't make the outer function async.
+      (async () => {
+        try {
+          const DocumentPicker = await import('expo-document-picker');
+          const result = await DocumentPicker.getDocumentAsync({
+            type: '*/*',
+            copyToCacheDirectory: true,
+          });
 
-        if (result.canceled || !result.assets || result.assets.length === 0) return;
+          if (result.canceled || !result.assets || result.assets.length === 0) return;
 
-        const asset = result.assets[0];
-        // Fetch the file as a blob from its local URI
-        const response = await fetch(asset.uri);
-        const blob = await response.blob();
-        await uploadFile(asset.name, asset.mimeType || 'application/octet-stream', blob);
-      } catch (err: any) {
-        alert('Could not open file picker: ' + err.message);
-      }
+          const asset = result.assets[0];
+          // Pass a React Native file object directly — avoids fetch(file://) which
+          // fails on many mobile platforms.
+          const fileObject = {
+            uri: asset.uri,
+            name: asset.name,
+            type: asset.mimeType || 'application/octet-stream',
+          };
+          await uploadFile(asset.name, asset.mimeType || 'application/octet-stream', fileObject);
+        } catch (err: any) {
+          alert('Could not open file picker: ' + err.message);
+        }
+      })();
     }
   };
 
