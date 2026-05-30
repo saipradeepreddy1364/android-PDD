@@ -19,6 +19,7 @@ import {
 } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
+import * as DocumentPicker from 'expo-document-picker';
 
 const getDynamicTimeline = (patient: any) => {
   const t = [
@@ -122,6 +123,7 @@ const PatientDetail = () => {
 
   const handleFileUpload = async () => {
     if (Platform.OS === 'web') {
+      // Web: use a hidden file input
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = '*/*';
@@ -132,6 +134,24 @@ const PatientDetail = () => {
         await uploadFile(file.name, file.type, file);
       };
       input.click();
+    } else {
+      // Mobile: use expo-document-picker
+      try {
+        const result = await DocumentPicker.getDocumentAsync({
+          type: '*/*',
+          copyToCacheDirectory: true,
+        });
+
+        if (result.canceled || !result.assets || result.assets.length === 0) return;
+
+        const asset = result.assets[0];
+        // Fetch the file as a blob from its local URI
+        const response = await fetch(asset.uri);
+        const blob = await response.blob();
+        await uploadFile(asset.name, asset.mimeType || 'application/octet-stream', blob);
+      } catch (err: any) {
+        alert('Could not open file picker: ' + err.message);
+      }
     }
   };
 
