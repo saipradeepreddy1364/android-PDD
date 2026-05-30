@@ -53,6 +53,8 @@ const LabRequisition = () => {
     instructions: "",
   });
 
+  const [isUrgent, setIsUrgent] = useState(false);
+
   // ── Procedure / subtype from backend ──────────────────────────────────────
   const [proceduresMap, setProceduresMap] = useState<ProceduresResponse>({});
   const [loadingProcedures, setLoadingProcedures] = useState(true);
@@ -104,6 +106,7 @@ const LabRequisition = () => {
 
         if (caseData) {
           setPatientData(caseData);
+          setIsUrgent(caseData.is_urgent || false);
         }
         setLoading(false);
       }
@@ -142,6 +145,7 @@ const LabRequisition = () => {
         .from("cases")
         .update({
           status: "lab-pending",
+          is_urgent: isUrgent,
           notes:
             (patientData.notes || "") +
             `\n\n[LAB REQUESTED - ${new Date().toLocaleDateString()}]\nProcedure: ${
@@ -338,6 +342,18 @@ const LabRequisition = () => {
                   placeholder="Primary diagnosis"
                 />
               </View>
+
+              {/* Urgent Case Checkbox */}
+              <TouchableOpacity
+                style={styles.checkboxRow}
+                onPress={() => setIsUrgent(!isUrgent)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.checkbox, isUrgent && styles.checkboxChecked]}>
+                  {isUrgent && <View style={styles.checkboxInner} />}
+                </View>
+                <Text style={styles.checkboxLabel}>Mark this Lab Request as Urgent Case</Text>
+              </TouchableOpacity>
 
               {/* Procedures loading/error */}
               {loadingProcedures && (
@@ -871,6 +887,36 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#64748B",
     marginTop: 2,
+  },
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 4,
+    gap: 10,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: "#CBD5E1",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxChecked: {
+    borderColor: "#EF4444",
+    backgroundColor: "#FEE2E2",
+  },
+  checkboxInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 3,
+    backgroundColor: "#EF4444",
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#334155",
   },
 });
 

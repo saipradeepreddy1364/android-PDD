@@ -7,6 +7,7 @@ import {
   ScrollView,
   Modal,
   ActivityIndicator,
+  TextInput,
 } from "react-native";
 import {
   ArrowRight,
@@ -17,6 +18,7 @@ import {
   ListChecks,
   RefreshCw,
   AlertCircle,
+  CheckCircle2,
 } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
@@ -51,6 +53,12 @@ const AIEngine = () => {
   const [workflowResult, setWorkflowResult] = useState<WorkflowResponse | null>(null);
   const [workflowLoading, setWorkflowLoading] = useState(false);
   const [workflowError, setWorkflowError] = useState<string | null>(null);
+
+  // ── Next Step addition states ──────────────────────────────────────────────
+  const [currentStepInput, setCurrentStepInput] = useState("");
+  const [availableSteps, setAvailableSteps] = useState<WorkflowStep[]>([]);
+  const [loadingSteps, setLoadingSteps] = useState(false);
+  const [showStepPicker, setShowStepPicker] = useState(false);
 
   // ── Load procedures on mount ──────────────────────────────────────────────
   useEffect(() => {
@@ -91,12 +99,31 @@ const AIEngine = () => {
     setWorkflowResult(null);
     setWorkflowError(null);
     setSelectedSubtype(null);
+    setCurrentStepInput("");
+    setAvailableSteps([]);
   }, [selectedProcedure]);
 
   useEffect(() => {
     setWorkflowResult(null);
     setWorkflowError(null);
-  }, [selectedSubtype]);
+    setCurrentStepInput("");
+    setAvailableSteps([]);
+
+    if (!selectedProcedure || !selectedSubtype) return;
+
+    const loadSteps = async () => {
+      try {
+        setLoadingSteps(true);
+        const result = await fetchWorkflow(selectedProcedure, selectedSubtype);
+        setAvailableSteps(result.workflow || []);
+      } catch (err) {
+        console.error("Error loading steps in background:", err);
+      } finally {
+        setLoadingSteps(false);
+      }
+    };
+    loadSteps();
+  }, [selectedProcedure, selectedSubtype]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleSelectCase = async (patientCase: any) => {
@@ -192,6 +219,69 @@ const AIEngine = () => {
     } finally {
       setWorkflowLoading(false);
     }
+  };
+
+  const getNextStepToDisplay = () => {
+    if (!workflowResult || !workflowResult.workflow || workflowResult.workflow.length === 0) {
+      return null;
+    }
+
+    const currentInput = (currentStepInput || "").trim().toLowerCase();
+    if (!currentInput) {
+      // If no current step entered, show the first step of the workflow
+      return {
+        step: workflowResult.workflow[0],
+        type: "first"
+      };
+    }
+
+    // Find the step matching the user's input
+    const matchingStepIndex = workflowResult.workflow.findIndex(s => 
+      s.current_step.toLowerCase().includes(currentInput) ||
+      s.step_number.toString() === currentInput
+    );
+
+    if (matchingStepIndex === -1) {
+      return {
+        error: `Could not find a step matching "${currentStepInput}". Showing first step:`,
+        step: workflowResult.workflow[0],
+        type: "fallback"
+      };
+    }
+
+    const matchingStep = workflowResult.workflow[matchingStepIndex];
+    
+    if (!matchingStep.next_step) {
+      return {
+        completed: true,
+        message: "You have reached the end of the workflow! No further steps required."
+      };
+    }
+
+    // Find the next step object
+    const nextStepObj = workflowResult.workflow.find(s => 
+      s.current_step.toLowerCase() === matchingStep.next_step.toLowerCase()
+    );
+
+    if (nextStepObj) {
+      return {
+        step: nextStepObj,
+        type: "next"
+      };
+    }
+
+    // Fallback if next step name is present but doesn't exist as a full step in the array
+    return {
+      step: {
+        step_number: matchingStep.step_number + 1,
+        current_step: matchingStep.next_step,
+        current_description: matchingStep.next_description || "Proceed with the next stage of treatment.",
+        next_step: "",
+        confidence: matchingStep.confidence,
+        source: matchingStep.source
+      },
+      type: "next"
+    };
   };
 
   const procedureNames = Object.keys(proceduresMap);
@@ -340,6 +430,54 @@ const AIEngine = () => {
           </View>
         </Modal>
 
+        {/* Step Picker Modal */}
+        <Modal visible={showStepPicker} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Current Step</Text>
+                <TouchableOpacity onPress={() => setShowStepPicker(false)}>
+                  <X size={20} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView>
+                <TouchableOpacity
+                  style={styles.casePickerItem}
+                  onPress={() => {
+                    setCurrentStepInput("");
+                    setShowStepPicker(false);
+                  }}
+                >
+                  <Text style={[styles.casePickerName, { color: "#8B5CF6", fontWeight: "700" }]}>
+                    None / Start of Treatment
+                  </Text>
+                </TouchableOpacity>
+                {availableSteps.map((step) => (
+                  <TouchableOpacity
+                    key={step.step_number}
+                    style={styles.casePickerItem}
+                    onPress={() => {
+                      setCurrentStepInput(step.current_step);
+                      setShowStepPicker(false);
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.casePickerName}>
+                        Step {step.step_number}: {step.current_step}
+                      </Text>
+                      {step.current_description ? (
+                        <Text style={styles.casePickerMeta} numberOfLines={1}>
+                          {step.current_description}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
         {/* File Analysis Card */}
         {(fetchingFile || fileAnalysis) && (
           <View style={styles.fileAnalysisCard}>
@@ -456,6 +594,33 @@ const AIEngine = () => {
             </View>
           </View>
 
+          {/* Current Step Input */}
+          {selectedSubtype && (
+            <View style={styles.inputGroupFull}>
+              <Text style={styles.inputLabelFull}>Current Step (Optional)</Text>
+              <View style={styles.textInputContainer}>
+                <TextInput
+                  style={styles.textInputFull}
+                  placeholder="e.g. Diagnosis, Preparation (or tap dropdown)"
+                  placeholderTextColor="#94A3B8"
+                  value={currentStepInput}
+                  onChangeText={setCurrentStepInput}
+                />
+                {availableSteps.length > 0 && (
+                  <TouchableOpacity
+                    style={styles.dropdownToggleBtn}
+                    onPress={() => setShowStepPicker(true)}
+                  >
+                    <ChevronDown size={18} color="#64748B" />
+                  </TouchableOpacity>
+                )}
+              </View>
+              {loadingSteps && (
+                <Text style={styles.stepSuggestionLoadingText}>Loading steps list…</Text>
+              )}
+            </View>
+          )}
+
           {/* Action button */}
           <TouchableOpacity
             onPress={handleGetWorkflow}
@@ -471,7 +636,7 @@ const AIEngine = () => {
               <ArrowRight size={16} color="#FFFFFF" />
             )}
             <Text style={styles.datasetButtonText}>
-              {workflowLoading ? "Fetching Workflow…" : "Get Workflow"}
+              {workflowLoading ? "Fetching Next Step…" : "Get Next Step"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -500,79 +665,102 @@ const AIEngine = () => {
             </View>
 
             <Text style={styles.workflowMeta}>
-              {workflowResult.total_steps} step
-              {workflowResult.total_steps !== 1 ? "s" : ""} in workflow
+              {workflowResult.total_steps} step{workflowResult.total_steps !== 1 ? "s" : ""} in total workflow · showing next step
             </Text>
 
-            {workflowResult.workflow.map((step: WorkflowStep) => (
-              <View key={step.step_number} style={styles.stepCard}>
-                {/* Step header row */}
-                <View style={styles.stepHeaderRow}>
-                  <View style={styles.stepBadge}>
-                    <Text style={styles.stepBadgeText}>
-                      {step.step_number}
-                    </Text>
-                  </View>
-                  <Text style={styles.stepCurrentName}>
-                    {step.current_step}
-                  </Text>
-                  <View
-                    style={[
-                      styles.confidencePill,
-                      {
-                        backgroundColor:
-                          step.confidence >= 80
-                            ? "#DCFCE7"
-                            : step.confidence >= 50
-                            ? "#FEF3C7"
-                            : "#FEE2E2",
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.confidenceText,
-                        {
-                          color:
-                            step.confidence >= 80
-                              ? "#15803D"
-                              : step.confidence >= 50
-                              ? "#B45309"
-                              : "#B91C1C",
-                        },
-                      ]}
-                    >
-                      {step.confidence}%
-                    </Text>
-                  </View>
-                </View>
+            {(() => {
+              const displayInfo = getNextStepToDisplay();
+              if (!displayInfo) return null;
 
-                {/* Current step description */}
-                {step.current_description ? (
-                  <Text style={styles.stepDesc}>
-                    {step.current_description}
-                  </Text>
-                ) : null}
+              if (displayInfo.completed) {
+                return (
+                  <View style={styles.completedCard}>
+                    <CheckCircle2 size={24} color="#10B981" />
+                    <Text style={styles.completedText}>{displayInfo.message}</Text>
+                  </View>
+                );
+              }
 
-                {/* Arrow to next step */}
-                {step.next_step && (
-                  <View style={styles.nextStepRow}>
-                    <ArrowRight size={12} color="#8B5CF6" />
-                    <Text style={styles.nextStepLabel}>
-                      Next:{" "}
-                      <Text style={styles.nextStepName}>
-                        {step.next_step}
+              const step = displayInfo.step;
+              return (
+                <View>
+                  {displayInfo.error && (
+                    <View style={styles.warningRowInline}>
+                      <AlertCircle size={14} color="#D97706" />
+                      <Text style={styles.warningTextInline}>{displayInfo.error}</Text>
+                    </View>
+                  )}
+                  
+                  <View style={styles.stepCard}>
+                    {/* Step header row */}
+                    <View style={styles.stepHeaderRow}>
+                      <View style={styles.stepBadge}>
+                        <Text style={styles.stepBadgeText}>
+                          {step.step_number}
+                        </Text>
+                      </View>
+                      <Text style={styles.stepCurrentName}>
+                        {step.current_step}
                       </Text>
-                    </Text>
-                  </View>
-                )}
+                      <View
+                        style={[
+                          styles.confidencePill,
+                          {
+                            backgroundColor:
+                              step.confidence >= 80
+                                ? "#DCFCE7"
+                                : step.confidence >= 50
+                                ? "#FEF3C7"
+                                : "#FEE2E2",
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.confidenceText,
+                            {
+                              color:
+                                step.confidence >= 80
+                                  ? "#15803D"
+                                  : step.confidence >= 50
+                                  ? "#B45309"
+                                  : "#B91C1C",
+                            },
+                          ]}
+                        >
+                          {step.confidence}%
+                        </Text>
+                      </View>
+                    </View>
 
-                {/* Source badge */}
-                <View style={styles.sourceBadge}>
-                  <Text style={styles.sourceText}>{step.source}</Text>
+                    {/* Current step description */}
+                    {step.current_description ? (
+                      <Text style={styles.stepDesc}>
+                        {step.current_description}
+                      </Text>
+                    ) : null}
+
+                    {/* Arrow to next step */}
+                    {step.next_step && (
+                      <View style={styles.nextStepRow}>
+                        <ArrowRight size={12} color="#8B5CF6" />
+                        <Text style={styles.nextStepLabel}>
+                          Next:{" "}
+                          <Text style={styles.nextStepName}>
+                            {step.next_step}
+                          </Text>
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Source badge */}
+                    <View style={styles.sourceBadge}>
+                      <Text style={styles.sourceText}>{step.source}</Text>
+                    </View>
+                  </View>
                 </View>
-              </View>
-            ))}
+              );
+            })()}
           </View>
         )}
       </ScrollView>
@@ -876,6 +1064,75 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: "#EF4444",
+  },
+  // ── Next Step styles ──
+  inputGroupFull: {
+    gap: 8,
+    width: "100%",
+  },
+  inputLabelFull: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#64748B",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  textInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.5)",
+    borderWidth: 1,
+    borderColor: "rgba(226,232,240,0.6)",
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    height: 48,
+    gap: 12,
+  },
+  textInputFull: {
+    flex: 1,
+    fontSize: 14,
+    color: "#0F172A",
+    height: "100%",
+  },
+  dropdownToggleBtn: {
+    padding: 6,
+  },
+  stepSuggestionLoadingText: {
+    fontSize: 11,
+    color: "#8B5CF6",
+    fontStyle: "italic",
+  },
+  completedCard: {
+    backgroundColor: "#ECFDF5",
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  completedText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#065F46",
+    flex: 1,
+  },
+  warningRowInline: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#FFFBEB",
+    borderColor: "#FDE68A",
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+  },
+  warningTextInline: {
+    fontSize: 12,
+    color: "#B45309",
+    fontWeight: "500",
   },
 });
 

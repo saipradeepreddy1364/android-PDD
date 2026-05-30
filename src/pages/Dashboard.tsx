@@ -53,6 +53,8 @@ const Dashboard = () => {
 
       if (userRole === 'organization') {
         navigation.replace("OrgDashboard");
+      } else if (userRole === 'lab') {
+        navigation.replace("LabDashboard");
       }
       return;
     }
@@ -93,6 +95,11 @@ const Dashboard = () => {
 
         if (userRole === 'organization') {
           navigation.replace("OrgDashboard");
+          return;
+        }
+
+        if (userRole === 'lab') {
+          navigation.replace("LabDashboard");
           return;
         }
 

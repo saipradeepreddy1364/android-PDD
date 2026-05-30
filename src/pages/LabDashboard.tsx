@@ -186,7 +186,7 @@ const LabDashboard = () => {
                           <Text style={styles.patientName}>{c.patient_name}</Text>
                           {isUrgent && (
                             <View style={styles.urgentBadge}>
-                              <Text style={styles.urgentText}>URGENT</Text>
+                              <Text style={styles.urgentText}>⚠️ URGENT</Text>
                             </View>
                           )}
                         </View>
@@ -371,7 +371,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardUrgent: {
-    borderColor: "#FCA5A5",
+    borderColor: "#EF4444",
+    borderWidth: 1.5,
     backgroundColor: "#FFFDFD",
   },
   cardHeader: {
@@ -390,15 +391,15 @@ const styles = StyleSheet.create({
     color: "#0F172A",
   },
   urgentBadge: {
-    backgroundColor: "#FEE2E2",
+    backgroundColor: "#EF4444",
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   urgentText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "800",
-    color: "#EF4444",
+    color: "#FFFFFF",
   },
   doctorName: {
     fontSize: 13,
