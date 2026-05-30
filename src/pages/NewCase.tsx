@@ -61,6 +61,13 @@ const NewCase = () => {
         return;
       }
 
+      // Fetch doctor's profile to get org_id
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('org_id')
+        .eq('id', user.id)
+        .single();
+
       const { error } = await supabase.from('cases').insert([
         {
           patient_name: formData.patient_name,
@@ -74,6 +81,7 @@ const NewCase = () => {
                 ? "checkup-pending"
                 : "in-progress",
           doctor_id: user.id,
+          org_id: profile?.org_id || null,
         },
       ]);
 

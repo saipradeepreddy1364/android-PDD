@@ -10,6 +10,10 @@ const SplashScreen = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
+      // Prevent redirecting to login if we are on a deep link like reset-password
+      const isResetPasswordRoute = Platform.OS === 'web' && typeof window !== 'undefined' && 
+        (window.location.pathname.includes('reset-password') || window.location.href.includes('type=recovery') || window.location.hash.includes('access_token'));
+
       // Run auth check, data pre-fetch, and minimum 4s display timer all at once
       const [authResult] = await Promise.all([
         // Auth check + data prefetch
@@ -17,8 +21,8 @@ const SplashScreen = () => {
           const { data: { session } } = await supabase.auth.getSession();
           if (!session) return { session: null, role: null };
 
-          // HARD LOCK: If email is not confirmed, they MUST NOT stay logged in
-          if (!session.user.email_confirmed_at) {
+          // HARD LOCK: If email is not confirmed, they MUST NOT stay logged in (unless on reset password flow)
+          if (!session.user.email_confirmed_at && !isResetPasswordRoute) {
             await supabase.auth.signOut();
             return { session: null, role: null };
           }
@@ -86,10 +90,6 @@ const SplashScreen = () => {
         new Promise(resolve => setTimeout(resolve, data?.profile ? 0 : 4000)),
       ]);
 
-      // Prevent redirecting to login if we are on a deep link like reset-password
-      const isResetPasswordRoute = Platform.OS === 'web' && typeof window !== 'undefined' && 
-        (window.location.pathname.includes('reset-password') || window.location.href.includes('type=recovery'));
-      
       if (isResetPasswordRoute) {
         // Explicitly navigate to ResetPassword to ensure the user isn't stuck or sent to Login
         navigation.replace("ResetPassword");
