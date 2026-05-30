@@ -19,7 +19,7 @@ import {
 } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
-import * as DocumentPicker from 'expo-document-picker';
+
 
 const getDynamicTimeline = (patient: any) => {
   const t = [
@@ -135,8 +135,9 @@ const PatientDetail = () => {
       };
       input.click();
     } else {
-      // Mobile: use expo-document-picker
+      // Mobile: dynamically import expo-document-picker to avoid Vite bundling issues
       try {
+        const DocumentPicker = await import('expo-document-picker');
         const result = await DocumentPicker.getDocumentAsync({
           type: '*/*',
           copyToCacheDirectory: true,
