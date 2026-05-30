@@ -120,9 +120,9 @@ const LabDashboard = () => {
   };
 
   const filteredCases = cases.filter(c =>
-    c.patient_name.toLowerCase().includes(search.toLowerCase()) ||
+    (c.patient_name || "").toLowerCase().includes(search.toLowerCase()) ||
     (c.doctor_name || "Doctor").toLowerCase().includes(search.toLowerCase()) ||
-    c.tooth_number.toLowerCase().includes(search.toLowerCase())
+    (c.tooth_number || "").toLowerCase().includes(search.toLowerCase())
   );
 
   const getStatusColor = (status: string) => {

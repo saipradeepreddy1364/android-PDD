@@ -143,10 +143,10 @@ const LabRequisition = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Fetch doctor's profile to get org_id
+      // Fetch doctor's profile to get org_id and full_name
       const { data: profile } = await supabase
         .from('profiles')
-        .select('org_id')
+        .select('org_id, full_name')
         .eq('id', user.id)
         .single();
 
@@ -155,7 +155,8 @@ const LabRequisition = () => {
         .update({
           status: "lab-pending",
           is_urgent: isUrgent,
-          org_id: profile?.org_id || null,
+          org_id: profile?.org_id || patientData.org_id || null,
+          doctor_name: profile?.full_name || null,
           notes:
             (patientData.notes || "") +
             `\n\n[LAB REQUESTED - ${new Date().toLocaleDateString()}]\nProcedure: ${

@@ -61,10 +61,10 @@ const NewCase = () => {
         return;
       }
 
-      // Fetch doctor's profile to get org_id
+      // Fetch doctor's profile to get org_id and full_name
       const { data: profile } = await supabase
         .from('profiles')
-        .select('org_id')
+        .select('org_id, full_name')
         .eq('id', user.id)
         .single();
 
@@ -72,8 +72,10 @@ const NewCase = () => {
         {
           patient_name: formData.patient_name,
           gender: formData.gender,
+          age: formData.age ? parseInt(formData.age, 10) : null,
           tooth_number: formData.tooth_number,
           diagnosis: formData.chief_complaint,
+          notes: formData.notes || null,
           status:
             formData.case_type === "lab"
               ? "lab-pending"
@@ -81,6 +83,7 @@ const NewCase = () => {
                 ? "checkup-pending"
                 : "in-progress",
           doctor_id: user.id,
+          doctor_name: profile?.full_name || null,
           org_id: profile?.org_id || null,
         },
       ]);
