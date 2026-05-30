@@ -796,18 +796,6 @@ const Signup = () => {
               />
             </View>
 
-
-            <TouchableOpacity 
-              style={styles.refreshBtn} 
-              onPress={() => {
-                supabase.from('profiles').select('id, full_name').eq('role', 'organization').then(({data, error}) => {
-                  if(error) Alert.alert("Error", error.message);
-                  if(data) setOrganizations(data);
-                });
-              }}
-            >
-              <Text style={styles.refreshBtnText}>Refresh from Supabase</Text>
-            </TouchableOpacity>
             <View style={{ maxHeight: 400 }}>
               <ScrollView 
                 nestedScrollEnabled={true}

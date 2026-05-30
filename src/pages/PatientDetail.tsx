@@ -50,6 +50,7 @@ const PatientDetail = () => {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const navigation = useRef<any>(null);
 
   const nav = useNavigation<any>();
@@ -80,6 +81,22 @@ const PatientDetail = () => {
   React.useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+          if (profile) {
+            setUserRole(profile.role);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching user profile in PatientDetail:", err);
+      }
 
       const { data: caseData } = await supabase
         .from('cases')
@@ -474,17 +491,19 @@ const PatientDetail = () => {
         </View>
 
         <View style={styles.tabBar}>
-          {["all info", "actions"].map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => setActiveTab(tab)}
-              style={[styles.tabButton, activeTab === tab && styles.tabButtonActive]}
-            >
-              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                {tab.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {["all info", "actions"]
+            .filter(tab => tab !== "actions" || userRole !== "organization")
+            .map((tab) => (
+              <TouchableOpacity
+                key={tab}
+                onPress={() => setActiveTab(tab)}
+                style={[styles.tabButton, activeTab === tab && styles.tabButtonActive]}
+              >
+                <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+                  {tab.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                </Text>
+              </TouchableOpacity>
+            ))}
         </View>
 
         <View style={styles.content}>

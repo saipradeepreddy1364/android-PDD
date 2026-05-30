@@ -227,8 +227,25 @@ const AIEngine = () => {
     }
 
     const currentInput = (currentStepInput || "").trim().toLowerCase();
-    if (!currentInput) {
-      // If no current step entered, show the first step of the workflow
+    
+    // Smart Bypassing: If no current step is entered, or if "start" is entered,
+    // we want to recommend the first actual clinical/operational step instead of the generic "Start" step.
+    if (!currentInput || currentInput === "start") {
+      const firstStep = workflowResult.workflow[0];
+      if (firstStep.current_step.toLowerCase() === "start" && firstStep.next_step) {
+        // Find the step object that corresponds to the first operational step (matching the next_step of "Start")
+        const firstOperationalStep = workflowResult.workflow.find(s => 
+          s.current_step.toLowerCase() === firstStep.next_step.toLowerCase()
+        );
+        if (firstOperationalStep) {
+          return {
+            step: firstOperationalStep,
+            type: "first"
+          };
+        }
+      }
+      
+      // Fallback: if "Start" is not the first step, or doesn't have a valid next_step, show the first step
       return {
         step: workflowResult.workflow[0],
         type: "first"
@@ -761,6 +778,46 @@ const AIEngine = () => {
                 </View>
               );
             })()}
+
+            {/* FULL WORKFLOW TIMELINE PATH */}
+            <View style={styles.timelineHeader}>
+              <Text style={styles.timelineTitle}>Procedure Workflow Path</Text>
+              <Text style={styles.timelineSubtitle}>The sequential stages for this treatment.</Text>
+            </View>
+
+            <View style={styles.timelineContainer}>
+              {workflowResult.workflow.map((item, index) => {
+                const displayInfo = getNextStepToDisplay();
+                const isActive = displayInfo && !displayInfo.completed && displayInfo.step && displayInfo.step.step_number === item.step_number;
+                return (
+                  <View key={index} style={styles.timelineItem}>
+                    <View style={styles.timelineLeft}>
+                      <View style={[styles.timelineDot, isActive && styles.timelineDotActive]}>
+                        <Text style={[styles.timelineDotText, isActive && styles.timelineDotTextActive]}>
+                          {item.step_number}
+                        </Text>
+                      </View>
+                      {index < workflowResult.workflow.length - 1 && (
+                        <View style={styles.timelineConnector} />
+                      )}
+                    </View>
+                    <View style={[styles.timelineContentCard, isActive && styles.timelineContentCardActive]}>
+                      <Text style={[styles.timelineStepName, isActive && styles.timelineStepNameActive]}>
+                        {item.current_step}
+                      </Text>
+                      <Text style={styles.timelineStepDesc}>
+                        {item.current_description || "No description available."}
+                      </Text>
+                      {item.next_step ? (
+                        <Text style={styles.timelineNextText}>
+                          Next: {item.next_step}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
           </View>
         )}
       </ScrollView>
@@ -1133,6 +1190,102 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#B45309",
     fontWeight: "500",
+  },
+  // ── Timeline styles ──
+  timelineHeader: {
+    marginTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(139,92,246,0.1)",
+    paddingTop: 16,
+    marginBottom: 12,
+  },
+  timelineTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#8B5CF6",
+  },
+  timelineSubtitle: {
+    fontSize: 11,
+    color: "#64748B",
+    marginTop: 2,
+  },
+  timelineContainer: {
+    gap: 0,
+  },
+  timelineItem: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  timelineLeft: {
+    alignItems: "center",
+    width: 24,
+  },
+  timelineDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#E2E8F0",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 2,
+  },
+  timelineDotActive: {
+    backgroundColor: "#8B5CF6",
+    shadowColor: "#8B5CF6",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  timelineDotText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  timelineDotTextActive: {
+    color: "#FFFFFF",
+  },
+  timelineConnector: {
+    width: 2,
+    flex: 1,
+    backgroundColor: "#E2E8F0",
+    marginVertical: 4,
+  },
+  timelineContentCard: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    gap: 4,
+  },
+  timelineContentCardActive: {
+    borderColor: "rgba(139,92,246,0.3)",
+    backgroundColor: "rgba(139,92,246,0.02)",
+    borderLeftWidth: 3,
+    borderLeftColor: "#8B5CF6",
+  },
+  timelineStepName: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#334155",
+  },
+  timelineStepNameActive: {
+    color: "#8B5CF6",
+    fontWeight: "700",
+  },
+  timelineStepDesc: {
+    fontSize: 11,
+    color: "#64748B",
+    lineHeight: 15,
+  },
+  timelineNextText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#8B5CF6",
+    marginTop: 4,
   },
 });
 
