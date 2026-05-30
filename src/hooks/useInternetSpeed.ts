@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Platform } from 'react-native';
 
-// Threshold: 0.5 Mbps is the minimum required for this app to be functional.
+// Threshold: 0.1 Mbps is the minimum required for this app to be functional.
 // Anything above this should not trigger a "Slow Internet" popup.
-const SLOW_SPEED_THRESHOLD_MBPS = 0.5;
+const SLOW_SPEED_THRESHOLD_MBPS = 0.1;
 const POPUP_DURATION_MS = 2000;
 
 // A small, reliable public resource (~50KB) for real download testing.
