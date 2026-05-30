@@ -538,6 +538,26 @@ const PatientDetail = () => {
     </View>
   );
 
+  const handleCancelLabRequest = async () => {
+    if (Platform.OS === 'web') {
+      if (!window.confirm('Cancel this lab request? The case will return to in-progress status.')) return;
+    }
+    try {
+      setActionLoading(true);
+      const { error } = await supabase
+        .from('cases')
+        .update({ status: 'in-progress', notes: null })
+        .eq('id', id);
+      if (error) throw error;
+      setPatient({ ...patient, status: 'in-progress', notes: null });
+      alert('Lab request cancelled. Case returned to in-progress.');
+    } catch (err: any) {
+      alert('Failed to cancel request: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const renderRequests = () => {
     const hasLabRequest = ['lab-pending', 'lab-received', 'completed'].includes(patient.status);
     const labDetails = hasLabRequest ? parseLabNotes(patient.notes) : null;
@@ -556,7 +576,7 @@ const PatientDetail = () => {
             {userRole !== 'organization' && (
               <TouchableOpacity
                 style={styles.raiseRequestBtn}
-                onPress={() => setActiveTab('actions')}
+                onPress={() => nav.navigate('LabRequisition', { caseId: patient.id })}
               >
                 <Text style={styles.raiseRequestBtnText}>Raise Lab Request</Text>
               </TouchableOpacity>
@@ -648,6 +668,20 @@ const PatientDetail = () => {
                 <Text style={styles.notesFallbackText}>{patient.notes || "No additional notes provided."}</Text>
               </View>
             )}
+
+            {/* Cancel Request — only show for lab-pending & only for non-org roles */}
+            {patient.status === 'lab-pending' && userRole !== 'organization' && (
+              <TouchableOpacity
+                style={styles.cancelRequestBtn}
+                onPress={handleCancelLabRequest}
+                disabled={actionLoading}
+              >
+                {actionLoading
+                  ? <ActivityIndicator size="small" color="#EF4444" />
+                  : <Trash2 size={14} color="#EF4444" />}
+                <Text style={styles.cancelRequestBtnText}>Cancel / Delete Request</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
@@ -706,14 +740,6 @@ const PatientDetail = () => {
               <Text style={styles.actionDesc}>Manage patient treatment lifecycle</Text>
 
               <View style={styles.actionGrid}>
-                <TouchableOpacity
-                  style={[styles.actionBtn, patient.status === 'lab-pending' && styles.actionBtnActive]}
-                  onPress={() => nav.navigate("LabRequisition", { caseId: patient.id })}
-                >
-                  <ClipboardList size={20} color={patient.status === 'lab-pending' ? "#FFFFFF" : "#0EA5E9"} />
-                  <Text style={[styles.actionBtnLabel, patient.status === 'lab-pending' && styles.actionBtnLabelActive]}>Request Lab</Text>
-                </TouchableOpacity>
-
                 <TouchableOpacity
                   style={[styles.actionBtn, patient.status === 'completed' && styles.actionBtnActive]}
                   onPress={() => handleStatusUpdate('completed')}
@@ -1110,6 +1136,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     color: "#475569",
+  },
+  cancelRequestBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 16,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    backgroundColor: '#FEF2F2',
+    justifyContent: 'center',
+  },
+  cancelRequestBtnText: {
+    color: '#EF4444',
+    fontSize: 13,
+    fontWeight: '600',
   },
   // ── Requests Tab Styles ──
   emptyRequests: {

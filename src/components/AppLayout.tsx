@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Platform, DeviceEventEmitter } from "react-native";
+import React, { useEffect, useState, useRef } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Platform, DeviceEventEmitter, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
 import {
@@ -62,7 +62,11 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const [orgUserId, setOrgUserId] = useState<string | null>(null);
   const [pendingLabCount, setPendingLabCount] = useState(0);
   const [labOrgId, setLabOrgId] = useState<string | null>(null);
-  
+
+  // Track previous counts to detect NEW arrivals and auto-alert
+  const prevApprovalsRef = useRef<number>(0);
+  const prevLabCountRef = useRef<number>(0);
+  const initialLoadDone = useRef<boolean>(false);
   useNotifications();
 
   useEffect(() => {
@@ -81,7 +85,25 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       .eq('org_id', uid)
       .in('role', ['doctor', 'lab'])
       .eq('status', 'pending');
-    if (!error && count !== null) setPendingApprovalsCount(count);
+    if (!error && count !== null) {
+      // Auto-alert when a NEW approval request arrives (not on first load)
+      if (initialLoadDone.current && count > prevApprovalsRef.current) {
+        const newCount = count - prevApprovalsRef.current;
+        if (Platform.OS === 'web') {
+          // Web: use a non-blocking notification style
+          // (we only show once to avoid spam — just update badge)
+        } else {
+          Alert.alert(
+            '🔔 New Approval Request',
+            `${newCount} new doctor/lab signup request${newCount > 1 ? 's' : ''} waiting for your approval. Tap the bell icon to review.`,
+            [{ text: 'View', onPress: () => setIsNotificationsOpen(true) }, { text: 'Later', style: 'cancel' }]
+          );
+        }
+      }
+      prevApprovalsRef.current = count;
+      initialLoadDone.current = true;
+      setPendingApprovalsCount(count);
+    }
   }, [role, orgUserId]);
 
   const fetchLabPendingCount = React.useCallback(async (orgId?: string) => {
@@ -93,7 +115,22 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       .select('*', { count: 'exact', head: true })
       .eq('org_id', oid)
       .eq('status', 'lab-pending');
-    if (!error && count !== null) setPendingLabCount(count);
+    if (!error && count !== null) {
+      // Auto-alert lab user when a new requisition comes in
+      if (initialLoadDone.current && count > prevLabCountRef.current) {
+        const newCount = count - prevLabCountRef.current;
+        if (Platform.OS !== 'web') {
+          Alert.alert(
+            '🔬 New Lab Requisition',
+            `${newCount} new lab request${newCount > 1 ? 's' : ''} received. Tap the bell to view details.`,
+            [{ text: 'View', onPress: () => setIsNotificationsOpen(true) }, { text: 'Later', style: 'cancel' }]
+          );
+        }
+      }
+      prevLabCountRef.current = count;
+      initialLoadDone.current = true;
+      setPendingLabCount(count);
+    }
   }, [role, labOrgId]);
 
   useFocusEffect(
@@ -259,10 +296,18 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
               <TouchableOpacity onPress={() => setIsNotificationsOpen(true)} style={styles.iconButton}>
                 <Bell size={20} color={isDark ? "#94A3B8" : "#64748B"} />
                 {role === "organization" && pendingApprovalsCount > 0 && (
-                  <View style={styles.orangeDot} />
+                  <View style={styles.countBadge}>
+                    <Text style={styles.countBadgeText}>
+                      {pendingApprovalsCount > 9 ? '9+' : pendingApprovalsCount}
+                    </Text>
+                  </View>
                 )}
                 {role === "lab" && pendingLabCount > 0 && (
-                  <View style={[styles.orangeDot, { backgroundColor: '#16A34A' }]} />
+                  <View style={[styles.countBadge, { backgroundColor: '#16A34A' }]}>
+                    <Text style={styles.countBadgeText}>
+                      {pendingLabCount > 9 ? '9+' : pendingLabCount}
+                    </Text>
+                  </View>
                 )}
               </TouchableOpacity>
               <TouchableOpacity onPress={toggle} style={styles.iconButton}>
@@ -287,10 +332,18 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
               <TouchableOpacity onPress={() => setIsNotificationsOpen(true)}>
                 <Bell size={20} color={isDark ? "#FFF" : "#000"} />
                 {role === "organization" && pendingApprovalsCount > 0 && (
-                  <View style={styles.orangeDotMobileHeader} />
+                  <View style={styles.countBadgeMobile}>
+                    <Text style={styles.countBadgeText}>
+                      {pendingApprovalsCount > 9 ? '9+' : pendingApprovalsCount}
+                    </Text>
+                  </View>
                 )}
                 {role === "lab" && pendingLabCount > 0 && (
-                  <View style={[styles.orangeDotMobileHeader, { backgroundColor: '#16A34A' }]} />
+                  <View style={[styles.countBadgeMobile, { backgroundColor: '#16A34A' }]}>
+                    <Text style={styles.countBadgeText}>
+                      {pendingLabCount > 9 ? '9+' : pendingLabCount}
+                    </Text>
+                  </View>
                 )}
               </TouchableOpacity>
               <TouchableOpacity onPress={handleLogout}>
@@ -382,6 +435,35 @@ const styles = StyleSheet.create({
   roleBadgeText: { fontSize: 10, fontWeight: "700", color: "#0369A1", textTransform: "uppercase" },
   iconButton: { padding: 8 },
   sidebarBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
+  countBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#F59E0B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  countBadgeMobile: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#F59E0B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  countBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '800',
+  },
   orangeDot: {
     position: 'absolute',
     top: 6,

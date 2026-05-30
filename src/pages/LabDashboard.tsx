@@ -171,11 +171,17 @@ const LabDashboard = () => {
   const handleAccept = async (caseId: string) => {
     try {
       setActionLoadingId(caseId);
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from("cases")
         .update({ status: "lab-received" })
-        .eq("id", caseId);
+        .eq("id", caseId)
+        .select();
       if (error) throw error;
+      if (!updated || updated.length === 0) {
+        throw new Error(
+          "Status update was blocked. Please ask your organisation admin to grant lab update permissions (RLS policy)."
+        );
+      }
       setCases((prev) =>
         prev.map((c) => (c.id === caseId ? { ...c, status: "lab-received" } : c))
       );
@@ -192,16 +198,22 @@ const LabDashboard = () => {
   const handleComplete = async (caseId: string) => {
     try {
       setActionLoadingId(caseId);
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from("cases")
         .update({ status: "completed" })
-        .eq("id", caseId);
+        .eq("id", caseId)
+        .select();
       if (error) throw error;
+      if (!updated || updated.length === 0) {
+        throw new Error(
+          "Status update was blocked. Please check your organisation permissions."
+        );
+      }
       setCases((prev) =>
         prev.map((c) => (c.id === caseId ? { ...c, status: "completed" } : c))
       );
       DeviceEventEmitter.emit("refreshLabCount");
-      showAlert("Completed", "Lab work marked as completed.");
+      showAlert("Completed", "Lab work marked as completed. The doctor has been notified.");
     } catch (err: any) {
       showAlert("Error", err.message);
     } finally {
