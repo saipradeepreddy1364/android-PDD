@@ -52,11 +52,11 @@ const LabDashboard = () => {
   useEffect(() => {
     fetchLabCases();
 
-    // Realtime channel handles instant updates; 5-second poll is the reliable fallback.
-    // 1-second polling was hitting Supabase auth rate limits (getUser on every tick).
+    // Realtime channel handles instant updates; 1-second poll is the reliable fallback.
+    // caching ensures we only fetch auth once, so 1-second polling is safe.
     const pollInterval = setInterval(() => {
       fetchLabCases();
-    }, 5000);
+    }, 1000);
 
     // Also refresh on DeviceEventEmitter signal (from notification sidebar actions)
     const eventSub = DeviceEventEmitter.addListener('refreshLabCases', fetchLabCases);
