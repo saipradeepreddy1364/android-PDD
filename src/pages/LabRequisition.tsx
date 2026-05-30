@@ -159,11 +159,13 @@ const LabRequisition = () => {
           doctor_name: profile?.full_name || null,
           notes:
             (patientData.notes || "") +
-            `\n\n[LAB REQUESTED - ${new Date().toLocaleDateString()}]\nProcedure: ${
-              selectedProcedure || "None"
-            }\nSubtype: ${selectedSubtype || "None"}\nMaterial: ${
-              labDetails.material
-            }\nShade: ${labDetails.shade}`,
+            `\n\n[LAB REQUESTED - ${new Date().toLocaleDateString()}]` +
+            `\nProcedure: ${selectedProcedure || "None"}` +
+            `\nSubtype: ${selectedSubtype || "None"}` +
+            `\nMaterial: ${labDetails.material}` +
+            `\nShade: ${labDetails.shade}` +
+            `\nMargin: ${labDetails.margin}` +
+            `\nSpecial instructions: ${labDetails.instructions || "None"}`,
         })
         .eq("id", caseId || patientData.id);
 

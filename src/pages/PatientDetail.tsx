@@ -136,7 +136,16 @@ const PatientDetail = () => {
       input.onchange = async (e: any) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        await uploadFile(file.name, file.type, file);
+        try {
+          // Read as ArrayBuffer first — mobile browsers (iOS Safari, Android Chrome)
+          // fail with "failed to fetch" when a raw File object is passed to Supabase.
+          // Converting to Uint8Array ensures binary data is sent correctly on all platforms.
+          const buffer = await file.arrayBuffer();
+          const bytes = new Uint8Array(buffer);
+          await uploadFile(file.name, file.type || 'application/octet-stream', bytes);
+        } catch (err: any) {
+          alert('Failed to read file: ' + err.message);
+        }
       };
       input.click();
     } else {
@@ -153,14 +162,33 @@ const PatientDetail = () => {
           if (result.canceled || !result.assets || result.assets.length === 0) return;
 
           const asset = result.assets[0];
-          // Pass a React Native file object directly — avoids fetch(file://) which
-          // fails on many mobile platforms.
-          const fileObject = {
-            uri: asset.uri,
-            name: asset.name,
-            type: asset.mimeType || 'application/octet-stream',
-          };
-          await uploadFile(asset.name, asset.mimeType || 'application/octet-stream', fileObject);
+
+          // Use expo-file-system to read file content as base64, then decode to Uint8Array.
+          // This is the most reliable approach for native Expo → Supabase Storage uploads.
+          // Passing { uri, name, type } plain objects fails with newer Supabase JS versions.
+          try {
+            const FileSystem = await import('expo-file-system');
+            const base64 = await (FileSystem as any).readAsStringAsync(asset.uri, {
+              encoding: 'base64',
+            });
+
+            // Decode base64 → Uint8Array.
+            // atob() is available in all modern browsers and Expo (Hermes engine).
+            const binaryStr = atob(base64);
+            const bytes = new Uint8Array(binaryStr.length);
+            for (let i = 0; i < binaryStr.length; i++) {
+              bytes[i] = binaryStr.charCodeAt(i);
+            }
+            await uploadFile(asset.name, asset.mimeType || 'application/octet-stream', bytes);
+          } catch (fsErr: any) {
+            // Fallback: try passing URI object directly (older Expo versions)
+            const fileObject = {
+              uri: asset.uri,
+              name: asset.name,
+              type: asset.mimeType || 'application/octet-stream',
+            };
+            await uploadFile(asset.name, asset.mimeType || 'application/octet-stream', fileObject);
+          }
         } catch (err: any) {
           alert('Could not open file picker: ' + err.message);
         }
@@ -174,7 +202,7 @@ const PatientDetail = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      const fileExt = fileName.split('.').pop();
+      const fileExt = fileName.split('.').pop() || 'bin';
       const sanitizedPatient = patient.patient_name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
       const sanitizedDate = new Date().toISOString().split('T')[0];
       const uploadName = `${sanitizedPatient}_Report_${sanitizedDate}--${Date.now()}.${fileExt}`;
@@ -184,14 +212,14 @@ const PatientDetail = () => {
         .from('clinical-files')
         .upload(filePath, fileData, {
           contentType: mimeType || 'application/octet-stream',
-          upsert: true
+          upsert: true,
         });
 
       if (uploadError) throw uploadError;
       await fetchFiles(user.id, patient.patient_name);
       alert('File uploaded successfully!');
     } catch (error: any) {
-      console.error("Upload failed:", error.message);
+      console.error('Upload failed:', error.message);
       alert('Upload failed: ' + error.message);
     } finally {
       setUploading(false);
