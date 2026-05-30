@@ -225,9 +225,21 @@ const PatientDetail = () => {
       const uploadName = `${sanitizedPatient}_Report_${sanitizedDate}--${Date.now()}.${fileExt}`;
       const filePath = `${user.id}/${uploadName}`;
 
+      // Convert Uint8Array/ArrayBuffer to a native Blob on web to ensure complete
+      // compatibility across all mobile browsers (e.g. iOS Safari and Android Chrome).
+      // Standard fetch() body on web expects Blob/File and sometimes fails with raw Uint8Array.
+      let dataToUpload = fileData;
+      if (Platform.OS === 'web' && !(fileData instanceof Blob)) {
+        try {
+          dataToUpload = new Blob([fileData], { type: mimeType || 'application/octet-stream' });
+        } catch (blobErr) {
+          console.warn("Could not convert data to Blob, uploading raw data:", blobErr);
+        }
+      }
+
       const { error: uploadError } = await supabase.storage
         .from('clinical-files')
-        .upload(filePath, fileData, {
+        .upload(filePath, dataToUpload, {
           contentType: mimeType || 'application/octet-stream',
           upsert: true,
         });

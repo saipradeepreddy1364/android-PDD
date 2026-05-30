@@ -16,6 +16,7 @@ import {
   LayoutGrid,
   FileSearch,
   BarChart3,
+  ListChecks,
 } from "lucide-react-native";
 import { useTheme } from "./ThemeProvider";
 import { supabase } from "@/lib/supabase";
@@ -32,7 +33,7 @@ type Tab = {
 const doctorTabs: Tab[] = [
   { name: "Dashboard", label: "Home", icon: LayoutDashboard },
   { name: "NewCase", label: "New", icon: FilePlus2 },
-  { name: "AIEngine", label: "AI", icon: Sparkles, primary: true },
+  { name: "AIEngine", label: "Steps", icon: ListChecks, primary: true },
   { name: "Patients", label: "Records", icon: Users },
   { name: "Insights", label: "Insights", icon: BarChart3 },
 ];
@@ -218,7 +219,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         }
         if (tab.primary) return (
           <TouchableOpacity key={tab.name} onPress={() => navigation.navigate(tab.name)} style={styles.primaryTab}>
-            <View style={styles.primaryTabInner}><Sparkles size={24} color="#FFFFFF" /></View>
+            <View style={styles.primaryTabInner}><ListChecks size={24} color="#FFFFFF" /></View>
           </TouchableOpacity>
         );
         return (
