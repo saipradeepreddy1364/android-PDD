@@ -41,6 +41,42 @@ const getDynamicTimeline = (patient: any) => {
   return t;
 };
 
+const parseLabNotes = (notes: string | null) => {
+  if (!notes) return null;
+
+  // Extract the [LAB REQUESTED ...] block
+  const labBlock = notes.match(/\[LAB REQUESTED[^\]]*\]([\s\S]*)/);
+  if (!labBlock) {
+    const clean = notes.trim();
+    return clean ? { rawNotes: clean } : null;
+  }
+
+  const block = labBlock[1];
+  const extract = (key: string) => {
+    const match = block.match(new RegExp(`${key}:\\s*(.+)`));
+    return match ? match[1].trim() : null;
+  };
+
+  const procedure  = extract("Procedure");
+  const subtype    = extract("Subtype");
+  const material   = extract("Material");
+  const shade      = extract("Shade");
+  const margin     = extract("Margin");
+  const instructions = extract("Special instructions") || extract("Instructions");
+
+  const beforeBlock = notes.split(/\[LAB REQUESTED/)[0].trim();
+
+  return {
+    procedure:     procedure !== "None" ? procedure : null,
+    subtype:       subtype !== "None" ? subtype : null,
+    material:      material !== "None" ? material : null,
+    shade:         shade !== "None" ? shade : null,
+    margin:        margin !== "None" ? margin : null,
+    instructions:  instructions !== "None" ? instructions : null,
+    rawNotes:      beforeBlock || null,
+  };
+};
+
 const PatientDetail = () => {
   const route = useRoute<any>();
   const id = route.params?.id;
@@ -114,6 +150,26 @@ const PatientDetail = () => {
     };
 
     fetchData();
+
+    // 1-second auto polling for reliable fallback/sync
+    const interval = setInterval(fetchData, 1000);
+
+    // Supabase Realtime channel for instant push updates
+    const channel = supabase
+      .channel(`patient-detail-${id}-${Date.now()}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'cases', filter: `id=eq.${id}` },
+        () => {
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
   }, [id]);
 
   if (loading) {
@@ -482,6 +538,122 @@ const PatientDetail = () => {
     </View>
   );
 
+  const renderRequests = () => {
+    const hasLabRequest = ['lab-pending', 'lab-received', 'completed'].includes(patient.status);
+    const labDetails = hasLabRequest ? parseLabNotes(patient.notes) : null;
+
+    return (
+      <View style={styles.card}>
+        <View style={styles.cardHeaderRow}>
+          <ClipboardList size={16} color="#8B5CF6" />
+          <Text style={styles.cardHeaderTitle}>Lab Requisition</Text>
+        </View>
+
+        {!hasLabRequest ? (
+          <View style={styles.emptyRequests}>
+            <ClipboardList size={36} color="#94A3B8" style={{ marginBottom: 12 }} />
+            <Text style={styles.emptyRequestsText}>No active lab requisitions for this patient.</Text>
+            {userRole !== 'organization' && (
+              <TouchableOpacity
+                style={styles.raiseRequestBtn}
+                onPress={() => setActiveTab('actions')}
+              >
+                <Text style={styles.raiseRequestBtnText}>Raise Lab Request</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : (
+          <View style={styles.requestContent}>
+            {/* Status Section */}
+            <View style={styles.requestStatusBox}>
+              <Text style={styles.statusLabel}>Current Status</Text>
+              <View style={styles.badgeRow}>
+                <View style={[
+                  styles.statusPillLarge,
+                  {
+                    backgroundColor:
+                      patient.status === 'lab-pending' ? '#FEF2F2' :
+                      patient.status === 'lab-received' ? '#FEF3C7' : '#ECFDF5',
+                    borderColor:
+                      patient.status === 'lab-pending' ? '#FCA5A5' :
+                      patient.status === 'lab-received' ? '#FCD34D' : '#A7F3D0',
+                    borderWidth: 1,
+                  }
+                ]}>
+                  <Text style={[
+                    styles.statusPillLargeText,
+                    {
+                      color:
+                        patient.status === 'lab-pending' ? '#EF4444' :
+                        patient.status === 'lab-received' ? '#D97706' : '#10B981',
+                    }
+                  ]}>
+                    {patient.status === 'lab-pending' ? 'Submitted' :
+                     patient.status === 'lab-received' ? 'In Progress' : 'Completed'}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.statusDescText}>
+                {patient.status === 'lab-pending' && "Requisition has been sent to the lab. Awaiting production start."}
+                {patient.status === 'lab-received' && "Lab has accepted the requisition. Work is in progress."}
+                {patient.status === 'completed' && "Lab work has been finished and delivered."}
+              </Text>
+            </View>
+
+            {/* Details Section */}
+            {labDetails ? (
+              <View style={styles.detailsList}>
+                <Text style={styles.detailsHeader}>Requisition Details</Text>
+                
+                {labDetails.procedure && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailName}>Procedure</Text>
+                    <Text style={styles.detailValue}>{labDetails.procedure}</Text>
+                  </View>
+                )}
+                {labDetails.subtype && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailName}>Subtype</Text>
+                    <Text style={styles.detailValue}>{labDetails.subtype}</Text>
+                  </View>
+                )}
+                {labDetails.material && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailName}>Material</Text>
+                    <Text style={styles.detailValue}>{labDetails.material}</Text>
+                  </View>
+                )}
+                {labDetails.shade && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailName}>Shade</Text>
+                    <Text style={styles.detailValue}>{labDetails.shade}</Text>
+                  </View>
+                )}
+                {labDetails.margin && (
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailName}>Margin</Text>
+                    <Text style={styles.detailValue}>{labDetails.margin}</Text>
+                  </View>
+                )}
+                {labDetails.instructions && (
+                  <View style={[styles.detailRow, { flexDirection: 'column', alignItems: 'flex-start', borderBottomWidth: 0 }]}>
+                    <Text style={styles.detailName}>Special Instructions</Text>
+                    <Text style={[styles.detailValue, { marginTop: 4, color: '#475569', lineHeight: 18 }]}>{labDetails.instructions}</Text>
+                  </View>
+                )}
+              </View>
+            ) : (
+              <View style={styles.notesFallback}>
+                <Text style={styles.detailsHeader}>Clinical Notes / Instructions</Text>
+                <Text style={styles.notesFallbackText}>{patient.notes || "No additional notes provided."}</Text>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+    );
+  };
+
   return (
     <AppLayout>
       <View style={styles.container}>
@@ -503,7 +675,7 @@ const PatientDetail = () => {
         </View>
 
         <View style={styles.tabBar}>
-          {["all info", "actions"]
+          {["all info", "requests", "actions"]
             .filter(tab => tab !== "actions" || userRole !== "organization")
             .map((tab) => (
               <TouchableOpacity
@@ -527,6 +699,7 @@ const PatientDetail = () => {
               {renderFiles()}
             </>
           )}
+          {activeTab === "requests" && renderRequests()}
           {activeTab === "actions" && (
             <View style={styles.card}>
               <Text style={styles.cardHeaderTitle}>Action Center</Text>
@@ -937,6 +1110,106 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     color: "#475569",
+  },
+  // ── Requests Tab Styles ──
+  emptyRequests: {
+    padding: 30,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyRequestsText: {
+    fontSize: 13,
+    color: "#64748B",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  raiseRequestBtn: {
+    backgroundColor: "#8B5CF6",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  raiseRequestBtnText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  requestContent: {
+    gap: 20,
+  },
+  requestStatusBox: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#F1F5F9",
+    gap: 8,
+  },
+  statusLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#94A3B8",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  badgeRow: {
+    flexDirection: "row",
+    marginTop: 2,
+  },
+  statusPillLarge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  statusPillLargeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  statusDescText: {
+    fontSize: 12,
+    color: "#64748B",
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  detailsList: {
+    gap: 12,
+  },
+  detailsHeader: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#475569",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+    paddingBottom: 6,
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  detailName: {
+    fontSize: 13,
+    color: "#64748B",
+    fontWeight: "500",
+  },
+  detailValue: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  notesFallback: {
+    gap: 8,
+  },
+  notesFallbackText: {
+    fontSize: 13,
+    color: "#475569",
+    lineHeight: 20,
   },
 });
 
