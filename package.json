@@ -25,6 +25,7 @@
     "expo-notifications": "~56.0.15",
     "expo-status-bar": "~56.0.4",
     "expo-system-ui": "~56.0.5",
+    "expo-updates": "~56.0.17",
     "inline-style-prefixer": "^7.0.1",
     "lucide-react-native": "^0.462.0",
     "react": "19.2.3",

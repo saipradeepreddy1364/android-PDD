@@ -9,8 +9,11 @@
     "assetBundlePatterns": [
       "**/*"
     ],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "updates": {
-      "enabled": false
+      "url": "https://u.expo.dev/a8e8fa5b-47b5-4f19-9e38-09a77ae852f3"
     },
     "ios": {
       "supportsTablet": true,

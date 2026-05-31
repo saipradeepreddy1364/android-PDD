@@ -31,6 +31,7 @@ import LabInsights from "./pages/LabInsights";
 import NotFound from "./pages/NotFound";
 
 import { useRealtimeNotifications } from "./lib/useRealtimeNotifications";
+import { InAppUpdateModal } from "@/components/InAppUpdateModal";
 
 const Stack = createStackNavigator();
 const queryClient = new QueryClient();
@@ -57,6 +58,7 @@ const App = () => {
             <AuthWrapper>
               <NavigationContainer linking={linking}>
               <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={false} />
+              <InAppUpdateModal />
               <Stack.Navigator 
                 initialRouteName="SplashScreen"
                 screenOptions={{
