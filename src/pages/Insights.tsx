@@ -65,7 +65,7 @@ const Insights = () => {
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>Clinical Insights</Text>
-            <Text style={styles.subtitle}>Your practice performance & AI impact</Text>
+            <Text style={styles.subtitle}>Your practice performance & clinical metrics</Text>
           </View>
         </View>
 
@@ -83,10 +83,10 @@ const Insights = () => {
 
         <View style={styles.heroCard}>
           <View style={styles.heroContent}>
-            <Text style={styles.heroTitle}>AI Assistant Impact</Text>
+            <Text style={styles.heroTitle}>Clinical Guide Impact</Text>
             <Text style={styles.heroText}>
-              Your use of the AI Clinical Guide has grown significantly.
-              You are currently ranked in the top 10% of tech-enabled clinicians in your region.
+              Your use of the Clinical Guide has grown significantly.
+              You are currently ranked in the top 10% of clinicians in your region.
             </Text>
             <TouchableOpacity style={styles.heroButton}>
               <Text style={styles.heroButtonText}>View Detailed Report</Text>

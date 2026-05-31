@@ -124,8 +124,6 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
             resizeMode="contain"
           />
         </View>
-        <ActivityIndicator size="small" color="#0EA5E9" style={styles.loader} />
-        <Text style={styles.tagline}>AI Dental Clinical Assistant</Text>
       </View>
     );
   }

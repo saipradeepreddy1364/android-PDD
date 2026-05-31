@@ -60,7 +60,7 @@ export const InAppUpdateModal = () => {
           </View>
           <Text style={styles.title}>Update Available! 🚀</Text>
           <Text style={styles.description}>
-            A new version of ClinLab AI Assist is ready. Update now to access the latest features and bug fixes.
+            A new version of ClinLab Assist is ready. Update now to access the latest features and bug fixes.
           </Text>
 
           {loading ? (
