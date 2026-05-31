@@ -234,31 +234,35 @@ const PatientDetail = () => {
 
           const asset = result.assets[0];
 
-          // Use expo-file-system to read file content as base64, then decode to Uint8Array.
-          // This is the most reliable approach for native Expo → Supabase Storage uploads.
-          // Passing { uri, name, type } plain objects fails with newer Supabase JS versions.
           try {
-            const FileSystem = await import('expo-file-system');
-            const base64 = await (FileSystem as any).readAsStringAsync(asset.uri, {
-              encoding: 'base64',
-            });
+            // Standard React Native way: fetch the local URI into a native Blob
+            const response = await fetch(asset.uri);
+            const blob = await response.blob();
+            await uploadFile(asset.name, asset.mimeType || 'application/octet-stream', blob);
+          } catch (blobErr: any) {
+            // Fallback: Use expo-file-system to read file content as base64, then decode to Uint8Array.
+            try {
+              const FileSystem = await import('expo-file-system');
+              const base64 = await (FileSystem as any).readAsStringAsync(asset.uri, {
+                encoding: 'base64',
+              });
 
-            // Decode base64 → Uint8Array.
-            // atob() is available in all modern browsers and Expo (Hermes engine).
-            const binaryStr = atob(base64);
-            const bytes = new Uint8Array(binaryStr.length);
-            for (let i = 0; i < binaryStr.length; i++) {
-              bytes[i] = binaryStr.charCodeAt(i);
+              // Decode base64 → Uint8Array.
+              // atob() is available in all modern browsers and Expo (Hermes engine).
+              const binaryStr = atob(base64);
+              const bytes = new Uint8Array(binaryStr.length);
+              for (let i = 0; i < binaryStr.length; i++) {
+                bytes[i] = binaryStr.charCodeAt(i);
+              }
+              await uploadFile(asset.name, asset.mimeType || 'application/octet-stream', bytes);
+            } catch (fsErr: any) {
+              const fileObject = {
+                uri: asset.uri,
+                name: asset.name,
+                type: asset.mimeType || 'application/octet-stream',
+              };
+              await uploadFile(asset.name, asset.mimeType || 'application/octet-stream', fileObject);
             }
-            await uploadFile(asset.name, asset.mimeType || 'application/octet-stream', bytes);
-          } catch (fsErr: any) {
-            // Fallback: try passing URI object directly (older Expo versions)
-            const fileObject = {
-              uri: asset.uri,
-              name: asset.name,
-              type: asset.mimeType || 'application/octet-stream',
-            };
-            await uploadFile(asset.name, asset.mimeType || 'application/octet-stream', fileObject);
           }
         } catch (err: any) {
           alert('Could not open file picker: ' + err.message);
@@ -279,13 +283,22 @@ const PatientDetail = () => {
       const uploadName = `${sanitizedPatient}_Report_${sanitizedDate}--${Date.now()}.${fileExt}`;
       const filePath = `${id}/${uploadName}`;
 
+      let finalMimeType = mimeType;
+      const ext = fileExt.toLowerCase();
+      if (!finalMimeType || finalMimeType === 'application/octet-stream') {
+        if (ext === 'pdf') finalMimeType = 'application/pdf';
+        else if (ext === 'jpg' || ext === 'jpeg') finalMimeType = 'image/jpeg';
+        else if (ext === 'png') finalMimeType = 'image/png';
+        else if (ext === 'gif') finalMimeType = 'image/gif';
+      }
+
       // Convert Uint8Array/ArrayBuffer to a native Blob on web to ensure complete
       // compatibility across all mobile browsers (e.g. iOS Safari and Android Chrome).
       // Standard fetch() body on web expects Blob/File and sometimes fails with raw Uint8Array.
       let dataToUpload = fileData;
       if (Platform.OS === 'web' && !(fileData instanceof Blob)) {
         try {
-          dataToUpload = new Blob([fileData], { type: mimeType || 'application/octet-stream' });
+          dataToUpload = new Blob([fileData], { type: finalMimeType });
         } catch (blobErr) {
           console.warn("Could not convert data to Blob, uploading raw data:", blobErr);
         }
@@ -294,7 +307,7 @@ const PatientDetail = () => {
       const { error: uploadError } = await supabase.storage
         .from('clinical-files')
         .upload(filePath, dataToUpload, {
-          contentType: mimeType || 'application/octet-stream',
+          contentType: finalMimeType,
           upsert: true,
         });
 
@@ -379,7 +392,7 @@ const PatientDetail = () => {
           document.body.removeChild(a);
         } else {
           import("react-native").then(({ Linking }) => {
-            Linking.openURL(data.signedUrl);
+            Linking.openURL(encodeURI(data.signedUrl));
           });
         }
       }
@@ -509,7 +522,7 @@ const PatientDetail = () => {
                     if (Platform.OS === 'web') {
                       if (newWindow) newWindow.location.href = data.signedUrl;
                     } else {
-                      import("react-native").then(({ Linking }) => Linking.openURL(data.signedUrl));
+                      import("react-native").then(({ Linking }) => Linking.openURL(encodeURI(data.signedUrl)));
                     }
                   } else {
                     if (newWindow) newWindow.close();

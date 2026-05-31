@@ -83,7 +83,7 @@ const OrgReports = () => {
       if (Platform.OS === 'web') {
         window.open(data.signedUrl, '_blank');
       } else {
-        Linking.openURL(data.signedUrl);
+        Linking.openURL(encodeURI(data.signedUrl));
       }
     }
   };
