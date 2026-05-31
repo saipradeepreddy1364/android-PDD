@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, DeviceEventEmitter, ActivityIndicator } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Bell, Info, AlertTriangle, CheckCircle2, Mail, Phone, Stethoscope, Calendar, UserCheck, UserX } from "lucide-react-native";
 import { SheetContent, SheetHeader, SheetTitle, SheetDescription } from "./ui/sheet";
 import { supabase } from "@/lib/supabase";
@@ -27,6 +28,7 @@ type CaseNotification = {
 type UserRole = "organization" | "doctor" | "lab" | null;
 
 export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => {
+  const insets = useSafeAreaInsets();
   const [pendingDoctors, setPendingDoctors] = useState<PendingDoctor[]>([]);
   const [caseNotifs, setCaseNotifs] = useState<CaseNotification[]>([]);
   const [labPendingCases, setLabPendingCases] = useState<any[]>([]);
@@ -197,7 +199,7 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
 
   return (
     <SheetContent open={open} onOpenChange={onOpenChange} side="right" style={[styles.sheetContent, isDark && styles.sheetContentDark]}>
-      <SheetHeader style={[styles.header, isDark && styles.headerDark]}>
+      <SheetHeader style={[styles.header, isDark && styles.headerDark, { paddingTop: Math.max(20, insets.top + 8) }]}>
         <View style={styles.titleRow}>
           <Bell size={20} color={isDark ? "#FFF" : "#0F172A"} />
           <SheetTitle style={[styles.title, isDark && styles.titleDark]}>Notifications</SheetTitle>

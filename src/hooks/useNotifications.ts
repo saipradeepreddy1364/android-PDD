@@ -9,13 +9,26 @@ export const useNotifications = () => {
 
     const setupRealtime = async () => {
       // Request notification permission as early as possible
-      await registerForPushNotificationsAsync();
+      const token = await registerForPushNotificationsAsync();
 
       // Use getSession() — no auth lock contention unlike getUser()
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
       const userId = session.user.id;
+
+      // Save token to profile
+      if (token) {
+        try {
+          await supabase
+            .from('profiles')
+            .update({ push_token: token })
+            .eq('id', userId);
+          console.log('[Notifications] Saved push token to profile successfully');
+        } catch (e) {
+          console.error('[Notifications] Failed to save push token to profile:', e);
+        }
+      }
 
       const { data: profile } = await supabase
         .from('profiles')

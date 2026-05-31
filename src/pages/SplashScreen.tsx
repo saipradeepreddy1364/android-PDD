@@ -23,12 +23,6 @@ const SplashScreen = () => {
           const { data: { session } } = await supabase.auth.getSession();
           if (!session) return { session: null, role: null };
 
-          // HARD LOCK: If email is not confirmed, they MUST NOT stay logged in (unless on reset password flow)
-          if (!session.user.email_confirmed_at && !isResetPasswordRoute) {
-            await supabase.auth.signOut();
-            return { session: null, role: null };
-          }
-
           const { data: profile } = await supabase
             .from('profiles')
             .select('*')

@@ -4,6 +4,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Stethoscope, Loader2, ChevronDown, Search, Eye, EyeOff } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { notifyOrgOfPendingApproval } from "@/lib/notifications";
 
 const showAlert = (title: string, message: string, actions?: any[]) => {
   if (Platform.OS === 'web') {
@@ -485,6 +486,10 @@ const Signup = () => {
           .upsert(profileData);
 
         if (profileError) throw profileError;
+
+        if ((authType === 'doctor' || authType === 'lab') && formData.organization.id) {
+          notifyOrgOfPendingApproval(formData.organization.id, formData.name, authType === 'lab');
+        }
 
         // Cleanup draft
         await AsyncStorage.removeItem(`signup_draft_${formData.email.toLowerCase().trim()}`);

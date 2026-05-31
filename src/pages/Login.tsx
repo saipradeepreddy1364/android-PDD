@@ -29,12 +29,6 @@ const Login = () => {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
-        // HARD LOCK: If email is not confirmed, they MUST NOT stay logged in
-        if (!session.user.email_confirmed_at) {
-          await supabase.auth.signOut();
-          return;
-        }
-
         const { data: profile } = await supabase
           .from('profiles')
           .select('role, status')
@@ -122,11 +116,7 @@ const Login = () => {
           await supabase.from('profiles').update({ email: trimmedEmail }).eq('id', data.session.user.id);
         }
 
-        if (!data.session.user.email_confirmed_at) {
-          showAlert("Email Verification Required", "Please verify your email to sign in.");
-          await supabase.auth.signOut();
-          return;
-        }
+
 
         if (profile?.role === 'doctor' || profile?.role === 'lab') {
           if (profile.status === 'rejected') {
@@ -196,15 +186,17 @@ const Login = () => {
         const status = profile?.status || data.session.user.user_metadata?.status || "pending";
         
         if ((role === "doctor" || role === "lab") && status !== "approved") {
-          await supabase.auth.signOut();
           if (status === "pending") {
-            showAlert("Approval Pending", "Your account is waiting for approval from your organization. You'll be able to login once they approve.");
-          } else if (status === "rejected") {
-            showAlert("Access Denied", "Your application was rejected by the organization.");
-          } else if (status === "blocked") {
-            showAlert("Access Blocked", "Your account has been blocked by your organization.");
+            showAlert("Approval Pending", "Your account is waiting for approval from your organization. You will be redirected to the waiting screen.");
+          } else {
+            await supabase.auth.signOut();
+            if (status === "rejected") {
+              showAlert("Access Denied", "Your application was rejected by the organization.");
+            } else if (status === "blocked") {
+              showAlert("Access Blocked", "Your account has been blocked by your organization.");
+            }
+            return;
           }
-          return;
         }
         
         navigation.replace("SplashScreen");

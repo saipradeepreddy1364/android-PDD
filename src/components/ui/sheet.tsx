@@ -1,6 +1,7 @@
 import * as React from "react";
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ViewStyle, TextStyle, StyleProp } from "react-native";
 import { X } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const Sheet = ({ children, open, onOpenChange }: { children: React.ReactNode, open?: boolean, onOpenChange?: (open: boolean) => void }) => {
   return <>{children}</>;
@@ -11,6 +12,8 @@ const SheetTrigger = ({ children, onPress }: { children: React.ReactNode, onPres
 };
 
 const SheetContent = ({ children, side = "right", open, onOpenChange, style }: { children: React.ReactNode, side?: "top" | "bottom" | "left" | "right", open?: boolean, onOpenChange?: (open: boolean) => void, style?: StyleProp<ViewStyle> }) => {
+  const insets = useSafeAreaInsets();
+  
   return (
     <Modal
       transparent
@@ -20,8 +23,16 @@ const SheetContent = ({ children, side = "right", open, onOpenChange, style }: {
     >
       <View style={styles.overlay}>
         <TouchableOpacity style={styles.backdrop} onPress={() => onOpenChange?.(false)} />
-        <View style={[styles.content, styles[side], style]}>
-          <TouchableOpacity style={styles.close} onPress={() => onOpenChange?.(false)}>
+        <View style={[
+          styles.content, 
+          styles[side], 
+          { paddingTop: Math.max(16, insets.top) },
+          style
+        ]}>
+          <TouchableOpacity 
+            style={[styles.close, { top: Math.max(16, insets.top + 8) }]} 
+            onPress={() => onOpenChange?.(false)}
+          >
             <X size={20} color="#64748B" />
           </TouchableOpacity>
           {children}

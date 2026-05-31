@@ -21,6 +21,7 @@ import {
 } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
+import { notifyOrgAndLabsOfNewCase } from "@/lib/notifications";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import {
   fetchProcedures,
@@ -170,6 +171,12 @@ const LabRequisition = () => {
         .eq("id", caseId || patientData.id);
 
       if (error) throw error;
+      
+      const targetOrgId = profile?.org_id || patientData.org_id;
+      if (targetOrgId) {
+        notifyOrgAndLabsOfNewCase(targetOrgId, patientData.patient_name || 'Patient', patientData.tooth_number || 'XX');
+      }
+
       alert("Lab requisition sent successfully!");
       navigation.goBack();
     } catch (error: any) {
