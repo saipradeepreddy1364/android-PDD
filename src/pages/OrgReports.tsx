@@ -24,42 +24,42 @@ const OrgReports = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 1. Get all doctors in this org
-      const { data: doctors } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .eq('org_id', user.id)
-        .eq('role', 'doctor');
+      // 1. Get all cases in this organization
+      const { data: orgCases } = await supabase
+        .from('cases')
+        .select('id, patient_name, doctor_id')
+        .eq('org_id', user.id);
 
-      if (doctors) {
+      if (orgCases) {
+        // Fetch doctor profiles to display doctor names
+        const doctorIds = [...new Set(orgCases.map(c => c.doctor_id).filter(Boolean))];
+        const { data: doctors } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', doctorIds);
+        const doctorMap = new Map(doctors?.map(d => [d.id, d.full_name]));
+
         let allFiles: FileItem[] = [];
-
-        for (const dr of doctors) {
-          const { data: drFiles, error } = await supabase.storage
+        await Promise.all(orgCases.map(async (c) => {
+          const { data: caseFiles, error } = await supabase.storage
             .from('clinical-files')
-            .list(dr.id);
+            .list(c.id);
 
-          if (!error && drFiles) {
-            const mappedFiles: FileItem[] = drFiles.map(f => {
-              const parts = f.name.split('--');
-              let pName = "Unknown Patient";
-              if (parts.length > 1) {
-                pName = parts[0].split('_')[0]?.replace(/-/g, ' ');
-              }
-
+          if (!error && caseFiles) {
+            const mappedFiles: FileItem[] = caseFiles.map(f => {
               return {
                 name: f.name.split('--').pop() || f.name,
-                size: `${(f.metadata.size / 1024 / 1024).toFixed(1)} MB`,
-                path: `${dr.id}/${f.name}`,
-                doctorName: dr.full_name,
-                patientName: pName,
+                size: `${((f.metadata?.size || 0) / 1024 / 1024).toFixed(1)} MB`,
+                path: `${c.id}/${f.name}`,
+                doctorName: doctorMap.get(c.doctor_id) || "Unknown Doctor",
+                patientName: c.patient_name,
                 type: f.name.match(/\.(jpg|jpeg|png)$/i) ? "img" : f.name.match(/\.pdf$/i) ? "pdf" : "doc",
                 createdAt: f.created_at
               };
             });
             allFiles = [...allFiles, ...mappedFiles];
           }
-        }
+        }));
         setFiles(allFiles.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       }
       setLoading(false);

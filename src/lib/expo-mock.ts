@@ -24,3 +24,15 @@ export const AndroidNotificationPriority = {
   LOW: 'low',
   MIN: 'min',
 };
+
+// Mocks for expo-modules-core
+export class NativeModule {}
+export const registerWebModule = () => {};
+export class CodedError extends Error {
+  code: string;
+  constructor(code: string, message: string) {
+    super(message);
+    this.code = code;
+  }
+}
+

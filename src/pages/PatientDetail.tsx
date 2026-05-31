@@ -91,10 +91,10 @@ const PatientDetail = () => {
 
   const nav = useNavigation<any>();
 
-  const fetchFiles = async (doctorId: string, patientName: string) => {
+  const fetchFiles = async (caseId: string, patientName: string) => {
     const { data: storageFiles } = await supabase.storage
       .from('clinical-files')
-      .list(doctorId);
+      .list(caseId);
 
     if (storageFiles) {
       const matchedFiles = storageFiles.filter(f => {
@@ -107,7 +107,7 @@ const PatientDetail = () => {
       }).map(f => ({
         name: f.name.split('--').slice(1).join('--') || f.name,
         tag: f.name.split('--')[0]?.split('_')[1]?.replace(/-/g, ' ') || "Other",
-        path: `${doctorId}/${f.name}`,
+        path: `${caseId}/${f.name}`,
         type: f.name.match(/\.(jpg|jpeg|png|gif)$/i) ? "img" : "pdf"
       }));
       setFiles(matchedFiles);
@@ -142,9 +142,7 @@ const PatientDetail = () => {
 
       if (caseData) {
         setPatient(caseData);
-        if (caseData.doctor_id) {
-          await fetchFiles(caseData.doctor_id, caseData.patient_name);
-        }
+        await fetchFiles(caseData.id, caseData.patient_name);
       }
       setLoading(false);
     };
@@ -279,7 +277,7 @@ const PatientDetail = () => {
       const sanitizedPatient = patient.patient_name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
       const sanitizedDate = new Date().toISOString().split('T')[0];
       const uploadName = `${sanitizedPatient}_Report_${sanitizedDate}--${Date.now()}.${fileExt}`;
-      const filePath = `${user.id}/${uploadName}`;
+      const filePath = `${id}/${uploadName}`;
 
       // Convert Uint8Array/ArrayBuffer to a native Blob on web to ensure complete
       // compatibility across all mobile browsers (e.g. iOS Safari and Android Chrome).
@@ -301,7 +299,7 @@ const PatientDetail = () => {
         });
 
       if (uploadError) throw uploadError;
-      await fetchFiles(user.id, patient.patient_name);
+      await fetchFiles(id, patient.patient_name);
       alert('File uploaded successfully!');
     } catch (error: any) {
       console.error('Upload failed:', error.message);
@@ -337,8 +335,7 @@ const PatientDetail = () => {
     if (error) {
       alert('Delete failed: ' + error.message);
     } else {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) await fetchFiles(user.id, patient.patient_name);
+      if (id) await fetchFiles(id, patient.patient_name);
     }
   };
 
@@ -504,12 +501,18 @@ const PatientDetail = () => {
               <TouchableOpacity
                 style={styles.viewButton}
                 onPress={async () => {
+                  const newWindow = Platform.OS === 'web' ? window.open('', '_blank') : null;
                   const { data } = await supabase.storage
                     .from('clinical-files')
                     .createSignedUrl(f.path, 3600);
                   if (data?.signedUrl) {
-                    if (Platform.OS === 'web') window.open(data.signedUrl, '_blank');
-                    else import("react-native").then(({ Linking }) => Linking.openURL(data.signedUrl));
+                    if (Platform.OS === 'web') {
+                      if (newWindow) newWindow.location.href = data.signedUrl;
+                    } else {
+                      import("react-native").then(({ Linking }) => Linking.openURL(data.signedUrl));
+                    }
+                  } else {
+                    if (newWindow) newWindow.close();
                   }
                 }}
               >

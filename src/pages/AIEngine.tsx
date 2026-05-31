@@ -139,7 +139,7 @@ const AIEngine = () => {
 
       const { data: storageFiles } = await supabase.storage
         .from("clinical-files")
-        .list(user.id);
+        .list(patientCase.id);
 
       if (storageFiles && storageFiles.length > 0) {
         const sanitizedName = patientCase.patient_name
@@ -158,7 +158,7 @@ const AIEngine = () => {
 
           const { data: urlData } = await supabase.storage
             .from("clinical-files")
-            .createSignedUrl(`${user.id}/${latestFile.name}`, 3600);
+            .createSignedUrl(`${patientCase.id}/${latestFile.name}`, 3600);
 
           if (urlData?.signedUrl) {
             const ext = latestFile.name.split(".").pop()?.toLowerCase();

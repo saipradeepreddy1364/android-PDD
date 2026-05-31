@@ -73,7 +73,7 @@ const ForgotPassword = () => {
                 <Text style={styles.label}>Email Address</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="admin@clinic.com"
+                  placeholder="Enter email address"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   value={email}

@@ -585,7 +585,7 @@ const Signup = () => {
             <View style={styles.inputWrapper}>
               <TextInput
                 style={styles.input}
-                placeholder={authType === "organization" ? "e.g. City Dental Clinic" : "Dr. Aarav Singh"}
+                placeholder={authType === "organization" ? "Enter organization name" : "Enter full name"}
                 value={formData.name}
                 onChangeText={(v) => {
                   setFormData({ ...formData, name: v });
@@ -631,7 +631,7 @@ const Signup = () => {
               <Text style={styles.label}>Email</Text>
               <TextInput
                 style={styles.input}
-                placeholder="you@clinic.com"
+                placeholder="Enter email address"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 value={formData.email}
@@ -643,7 +643,7 @@ const Signup = () => {
               <Text style={styles.label}>Phone</Text>
               <TextInput
                 style={styles.input}
-                placeholder="+91 ..."
+                placeholder="Enter mobile number"
                 keyboardType="phone-pad"
                 value={formData.phone}
                 onChangeText={(v) => setFormData({ ...formData, phone: v })}

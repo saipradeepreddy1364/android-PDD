@@ -242,7 +242,7 @@ const Login = () => {
               <Text style={styles.label}>Email Address</Text>
               <TextInput
                 style={styles.input}
-                placeholder="name@example.com"
+                placeholder="Enter email address"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"

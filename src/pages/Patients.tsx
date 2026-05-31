@@ -68,42 +68,20 @@ const Patients = () => {
     if (!error && data) setCases(data);
 
     // Fetch file counts
-    if (currentRole === 'organization') {
-      const { data: doctors } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('org_id', currentUser.id);
-
-      if (doctors) {
-        const counts: Record<string, number> = {};
-        for (const dr of doctors) {
-          const { data: files } = await supabase.storage.from('clinical-files').list(dr.id);
+    const counts: Record<string, number> = {};
+    if (data && data.length > 0) {
+      await Promise.all(data.map(async (c: any) => {
+        try {
+          const { data: files } = await supabase.storage.from('clinical-files').list(c.id);
           if (files) {
-            files.forEach(f => {
-              const parts = f.name.split('--');
-              if (parts.length > 1) {
-                const pName = parts[0].split('_')[0]?.replace(/-/g, ' ');
-                if (pName) counts[pName] = (counts[pName] || 0) + 1;
-              }
-            });
+            counts[c.patient_name] = files.filter(f => f.name !== '.emptyFolderPlaceholder').length;
           }
+        } catch (err) {
+          console.error(`Error counting files for case ${c.id}:`, err);
         }
-        setFileCounts(counts);
-      }
-    } else {
-      const { data: files } = await supabase.storage.from('clinical-files').list(currentUser.id);
-      if (files) {
-        const counts: Record<string, number> = {};
-        files.forEach(f => {
-          const parts = f.name.split('--');
-          if (parts.length > 1) {
-            const pName = parts[0].split('_')[0]?.replace(/-/g, ' ');
-            if (pName) counts[pName] = (counts[pName] || 0) + 1;
-          }
-        });
-        setFileCounts(counts);
-      }
+      }));
     }
+    setFileCounts(counts);
 
     if (isInitial) setLoading(false);
   };
