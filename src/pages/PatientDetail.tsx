@@ -235,9 +235,9 @@ const PatientDetail = () => {
           const asset = result.assets[0];
 
           try {
-            const FileSystem = await import('expo-file-system');
+            const FileSystem = await import('expo-file-system/legacy');
             const base64 = await (FileSystem as any).readAsStringAsync(asset.uri, {
-              encoding: (FileSystem as any).EncodingType.Base64 || 'base64',
+              encoding: (FileSystem as any).EncodingType?.Base64 || 'base64',
             });
 
             // Decode base64 → ArrayBuffer
