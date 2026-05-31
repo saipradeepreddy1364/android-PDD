@@ -9,9 +9,7 @@
     "assetBundlePatterns": [
       "**/*"
     ],
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/a8e8fa5b-47b5-4f19-9e38-09a77ae852f3"
     },
