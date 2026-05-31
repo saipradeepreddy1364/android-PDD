@@ -128,7 +128,7 @@ export const useSidebar = () => React.useContext(SidebarContext);
 
 const styles = StyleSheet.create({
   providerRoot: { flex: 1 },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.4)", zIndex: 99 },
+  overlay: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.4)", zIndex: 99 },
   sidebar: {
     position: "absolute", top: 0, bottom: 0, width: SIDEBAR_WIDTH,
     backgroundColor: "#FFFFFF", zIndex: 100, paddingVertical: 16,

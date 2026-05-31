@@ -6,13 +6,12 @@
     "orientation": "portrait",
     "icon": "./public/favicon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
+    "updates": {
+      "enabled": false
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.clinlab.aiassist",
@@ -23,7 +22,8 @@
     "android": {
       "package": "com.clinlab.aiassist",
       "adaptiveIcon": {
-        "backgroundColor": "#0EA5E9"
+        "foregroundImage": "./public/favicon.png",
+        "backgroundColor": "#FFFFFF"
       },
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
@@ -32,8 +32,7 @@
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
         "android.permission.POST_NOTIFICATIONS"
-      ],
-      "googleServicesFile": "./google-services.json"
+      ]
     },
     "web": {
       "favicon": "./public/favicon.png",
@@ -48,14 +47,13 @@
           "defaultChannel": "clinlab-alerts",
           "sounds": []
         }
-      ]
+      ],
+      "expo-status-bar"
     ],
-    "notification": {
-      "icon": "./public/favicon.png",
-      "color": "#0EA5E9",
-      "iosDisplayInForeground": true,
-      "androidMode": "default",
-      "androidCollapsedTitle": "ClinLab Alerts"
+    "extra": {
+      "eas": {
+        "projectId": "a8e8fa5b-47b5-4f19-9e38-09a77ae852f3"
+      }
     }
   }
 }

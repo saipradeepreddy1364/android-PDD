@@ -4,9 +4,25 @@
  * Falls back to the production Render URL.
  */
 
-const BACKEND_URL =
-  (import.meta.env.VITE_BACKEND_URL as string | undefined) ||
-  "https://pdd-backend-ztqc.onrender.com";
+let BACKEND_URL = "";
+try {
+  // @ts-ignore
+  BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "";
+} catch (e) {
+  BACKEND_URL = process.env.VITE_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || "";
+}
+
+const isInvalidBackend = (val: string) => {
+  return !val || 
+    val === "undefined" || 
+    val === "null" || 
+    val.trim() === "" || 
+    !val.startsWith("http");
+};
+
+if (isInvalidBackend(BACKEND_URL)) {
+  BACKEND_URL = "https://pdd-backend-ztqc.onrender.com";
+}
 
 // ---------------------------------------------------------------------------
 // Types

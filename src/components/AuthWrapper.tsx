@@ -31,21 +31,27 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
       setSession(session);
 
       if (session?.user) {
-        // Fetch profile to check status and role
-        const { data: profile } = await supabase
+        const { data: profile, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single();
         
         if (profile) {
+          if (profile.status === 'blocked' || profile.status === 'rejected') {
+            // Force logout for blocked or rejected users
+            await supabase.auth.signOut();
+            setSession(null);
+            setProfile(null);
+            return;
+          }
           if (prevStatusRef.current === 'pending' && profile.status === 'approved') {
             setShowSuccessPopup(true);
           }
           prevStatusRef.current = profile.status;
           setProfile(profile);
-        } else {
-          // Profile was deleted, but auth session remains. Force logout.
+        } else if (error && (error.code === 'PGRST116' || error.message?.includes('0 rows') || error.message?.includes('JSON object requested'))) {
+          // Profile was deleted/not found, but auth session remains. Force logout.
           if (prevStatusRef.current === 'pending') {
             setShowRejectedPopup(true);
           }
@@ -53,6 +59,10 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
           await supabase.auth.signOut();
           setSession(null);
           setProfile(null);
+        } else {
+          // This is a network error, database connection issue, or other temporary issue.
+          // DO NOT force logout, just log it.
+          console.log("Profile fetch failed (possibly network/connectivity issue):", error);
         }
       }
       setLoading(false);
@@ -115,7 +125,7 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
       <View style={styles.splashContainer}>
         <View style={styles.logoWrapper}>
           <Image 
-            source={{ uri: "/pwa-512x512.png" }} 
+            source={{ uri: Platform.OS === 'web' ? "/favicon.png" : "https://clinlab-ai-assist.vercel.app/favicon.png" }} 
             style={styles.logo}
             resizeMode="contain"
           />

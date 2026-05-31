@@ -44,7 +44,8 @@ const Login = () => {
         if (profile?.role === 'organization') {
           navigation.navigate("OrgDashboard");
         } else if (profile?.role === 'doctor' || profile?.role === 'lab') {
-          if (profile.status === 'approved') {
+          if (profile.status === 'approved' || profile.status === 'pending') {
+            // Let approved users proceed. Pending users are intercepted by AuthWrapper.
             navigation.navigate(profile.role === 'lab' ? "LabDashboard" : "Dashboard");
           } else {
             await supabase.auth.signOut();
@@ -73,21 +74,8 @@ const Login = () => {
       });
 
       if (error) {
-        // Any error that isn't specifically about unconfirmed email is likely a credential issue
-        if (!error.message.toLowerCase().includes("email not confirmed")) {
-          // Reliable existence check via profiles table
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('email', trimmedEmail)
-            .maybeSingle();
-
-          if (profile) {
-            showAlert("Login Failed", "Incorrect email or password. Please try again.");
-          } else {
-            showAlert("Account Not Found", "This email is not registered. Please register to get access.");
-          }
-        } else {
+        const errorMsg = error.message.toLowerCase();
+        if (errorMsg.includes("email not confirmed")) {
           // Trigger OTP flow directly from Login
           setLoading(true);
           const { error: resendError } = await supabase.auth.resend({
@@ -101,6 +89,11 @@ const Login = () => {
           } else {
             showAlert("Verification Error", resendError.message);
           }
+        } else if (errorMsg.includes("invalid login credentials") || errorMsg.includes("invalid credentials")) {
+          showAlert("Login Failed", "Incorrect email or password. Please try again.");
+        } else {
+          // Network issue or other backend issue
+          showAlert("Login Error", error.message);
         }
         return;
       }
@@ -140,8 +133,8 @@ const Login = () => {
 
         if (profile?.role === 'doctor' || profile?.role === 'lab') {
           if (profile.status === 'pending') {
-            await supabase.auth.signOut();
-            showAlert("Approval Pending", "Your account is waiting for approval from your organization. You'll be able to login once they approve.");
+            // Allow navigating. AuthWrapper will intercept and show the pending screen.
+            navigation.replace(profile.role === 'lab' ? "LabDashboard" : "Dashboard");
             return;
           }
           if (profile.status === 'rejected') {

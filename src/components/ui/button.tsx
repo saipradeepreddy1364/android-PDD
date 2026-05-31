@@ -38,12 +38,12 @@ const Button = ({
   return (
     <TouchableOpacity 
       onPress={onPress} 
-      style={buttonStyle as ViewStyle}
+      style={buttonStyle as unknown as ViewStyle}
       disabled={disabled}
       activeOpacity={0.7}
     >
       {typeof children === "string" ? (
-        <Text style={contentTextStyle as TextStyle}>{children}</Text>
+        <Text style={contentTextStyle as unknown as TextStyle}>{children}</Text>
       ) : (
         children
       )}
