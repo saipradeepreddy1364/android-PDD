@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useRef } from "react";
 
 type AppData = {
   profile: any | null;
+  role: string | null;
   cases: any[];
   doctors: any[];
   pendingCount: number;
@@ -16,6 +17,7 @@ type AppData = {
 
 const defaultData: AppData = {
   profile: null,
+  role: null,
   cases: [],
   doctors: [],
   pendingCount: 0,

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Image, Platform } from "react-native";
+
+const APP_LOGO = require("../assets/logo.png");
 import { supabase } from "@/lib/supabase";
 import { Clock, AlertCircle, LogOut, CheckCircle } from "lucide-react-native";
 
@@ -125,7 +127,7 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
       <View style={styles.splashContainer}>
         <View style={styles.logoWrapper}>
           <Image 
-            source={{ uri: Platform.OS === 'web' ? "/favicon.png" : "https://clinlab-ai-assist.vercel.app/favicon.png" }} 
+            source={APP_LOGO}
             style={styles.logo}
             resizeMode="contain"
           />

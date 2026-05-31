@@ -4,6 +4,8 @@ import { useNavigation } from "@react-navigation/native";
 import { supabase } from "@/lib/supabase";
 import { useAppData } from "@/lib/AppDataContext";
 
+const APP_LOGO = require("../assets/logo.png");
+
 const SplashScreen = () => {
   const navigation = useNavigation<any>();
   const { data, setData, setIsPreloaded } = useAppData();
@@ -49,6 +51,7 @@ const SplashScreen = () => {
 
             setData({
               profile,
+              role,
               doctors,
               cases,
               pendingCount,
@@ -72,6 +75,7 @@ const SplashScreen = () => {
 
             setData({
               profile,
+              role,
               cases: cases || [],
               recentCases: (cases || []).slice(0, 5),
               stats: {
@@ -100,6 +104,8 @@ const SplashScreen = () => {
       if (authResult.session) {
         if (authResult.role === 'organization') {
           navigation.replace("OrgDashboard");
+        } else if (authResult.role === 'lab') {
+          navigation.replace("LabDashboard");
         } else {
           navigation.replace("Dashboard");
         }
@@ -115,7 +121,7 @@ const SplashScreen = () => {
     <View style={styles.container}>
       <View style={styles.logoWrapper}>
         <Image 
-          source={{ uri: Platform.OS === 'web' ? "/favicon.png" : "https://clinlab-ai-assist.vercel.app/favicon.png" }} 
+          source={APP_LOGO}
           style={styles.logo}
           resizeMode="contain"
         />

@@ -3,8 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Platform } from "react-native";
-import { StatusBar } from "expo-status-bar";
+import { Platform, StatusBar } from "react-native";
 
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthWrapper } from "@/components/AuthWrapper";
@@ -57,7 +56,7 @@ const App = () => {
             <NetworkGuard />
             <AuthWrapper>
               <NavigationContainer linking={linking}>
-              <StatusBar style="auto" />
+              <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" translucent={false} />
               <Stack.Navigator 
                 initialRouteName="SplashScreen"
                 screenOptions={{

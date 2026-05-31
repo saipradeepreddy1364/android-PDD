@@ -157,15 +157,6 @@ const Dashboard = () => {
             <Text style={styles.statsSummary}>
               {stats.active} new cases · {stats.lab} lab requests pending
             </Text>
-            <View style={styles.heroActions}>
-              <TouchableOpacity
-                onPress={() => navigation.navigate("AIEngine")}
-                style={styles.heroButton}
-              >
-                <Sparkles size={14} color="#FFFFFF" />
-                <Text style={styles.heroButtonText}>AI Clinical Guide</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
 

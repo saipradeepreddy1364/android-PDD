@@ -22,6 +22,7 @@ import { useTheme } from "./ThemeProvider";
 import { supabase } from "@/lib/supabase";
 import { useNotifications } from "@/hooks/useNotifications";
 import { NotificationSidebar } from "./NotificationSidebar";
+import { useAppData } from "@/lib/AppDataContext";
 
 type Tab = {
   name: string;
@@ -54,8 +55,10 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { theme, toggle } = useTheme();
   const navigation = useNavigation<any>();
   const route = useRoute();
+  const { data: appData } = useAppData();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [role, setRole] = useState<string | null>(null);
+  // Seed role from preloaded context so tabs appear immediately (no async delay)
+  const [role, setRole] = useState<string | null>(appData.role);
   const [windowWidth, setWindowWidth] = useState(Dimensions.get("window").width);
   const insets = useSafeAreaInsets();
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
@@ -189,6 +192,13 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   }, [role, labOrgId]);
 
   useEffect(() => {
+    // Update role if context loads after mount (e.g. on first launch before preload completes)
+    if (appData.role && !role) {
+      setRole(appData.role);
+    }
+  }, [appData.role]);
+
+  useEffect(() => {
     let authListener: any;
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -209,6 +219,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         if (profile.role === 'lab') {
           setLabOrgId(profile.org_id || session.user.id);
         }
+      } else if (appData.role) {
+        // Fallback: use preloaded role from context if profile query fails
+        setRole(appData.role);
       }
     };
 
@@ -323,7 +336,11 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
       <View style={styles.main}>
         {!isDesktop && (
-          <View style={[styles.header, isDark && styles.headerDark, { paddingTop: insets.top }]}>
+          <View style={[
+            styles.header,
+            isDark && styles.headerDark,
+            { paddingTop: insets.top, height: 60 + insets.top }
+          ]}>
             <Text style={styles.brandText}>ClinLab</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
               <TouchableOpacity onPress={toggle}>
@@ -410,7 +427,14 @@ const styles = StyleSheet.create({
   navTextDesktop: { color: "#64748B", fontWeight: "600", fontSize: 14 },
   navTextDesktopDark: { color: "#94A3B8" },
   navTextActiveDesktop: { color: "#0EA5E9" },
-  header: { height: 60, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, backgroundColor: "#FFFFFF" },
+  header: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    justifyContent: "space-between", 
+    paddingHorizontal: 16, 
+    backgroundColor: "#FFFFFF",
+    // height is set dynamically with insets in JSX
+  },
   headerDark: { backgroundColor: "#0F172A" },
   content: { 
     flex: 1,
