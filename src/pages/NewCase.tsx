@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Modal, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { X, ChevronDown, Check, Stethoscope, Clipboard } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
@@ -100,8 +100,16 @@ const NewCase = () => {
 
   return (
     <AppLayout>
-      <ScrollView style={styles.container}>
-        <Text style={styles.description}>Capture clinical findings for the patient.</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+      >
+        <ScrollView 
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.description}>Capture clinical findings for the patient.</Text>
 
         <View style={styles.form}>
           <View style={styles.card}>
@@ -238,6 +246,7 @@ const NewCase = () => {
           </View>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Gender Picker Modal */}
       <Modal
@@ -278,6 +287,11 @@ const NewCase = () => {
 const styles = StyleSheet.create({
   container: {
     padding: 16,
+    gap: 20,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 140 : 260, // Add bottom padding to allow scrolling inputs above the keyboard
     gap: 20,
   },
   description: {
