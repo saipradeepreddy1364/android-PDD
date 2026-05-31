@@ -41,12 +41,9 @@ const Login = () => {
           .eq('id', session.user.id)
           .single();
         
-        if (profile?.role === 'organization') {
-          navigation.navigate("OrgDashboard");
-        } else if (profile?.role === 'doctor' || profile?.role === 'lab') {
-          if (profile.status === 'approved' || profile.status === 'pending') {
-            // Let approved users proceed. Pending users are intercepted by AuthWrapper.
-            navigation.navigate(profile.role === 'lab' ? "LabDashboard" : "Dashboard");
+        if (profile?.role === 'organization' || profile?.role === 'doctor' || profile?.role === 'lab') {
+          if (profile.role === 'organization' || profile.status === 'approved' || profile.status === 'pending') {
+            navigation.replace("SplashScreen");
           } else {
             await supabase.auth.signOut();
           }
@@ -132,11 +129,6 @@ const Login = () => {
         }
 
         if (profile?.role === 'doctor' || profile?.role === 'lab') {
-          if (profile.status === 'pending') {
-            // Allow navigating. AuthWrapper will intercept and show the pending screen.
-            navigation.replace(profile.role === 'lab' ? "LabDashboard" : "Dashboard");
-            return;
-          }
           if (profile.status === 'rejected') {
             await supabase.auth.signOut();
             showAlert("Access Denied", "Your application was rejected by the organization.");
@@ -147,10 +139,8 @@ const Login = () => {
             showAlert("Access Blocked", "Your account has been blocked by your organization.");
             return;
           }
-          navigation.replace(profile.role === 'lab' ? "LabDashboard" : "Dashboard");
-        } else {
-          navigation.replace("OrgDashboard");
         }
+        navigation.replace("SplashScreen");
       }
     } catch (error: any) {
       showAlert("Login Error", error.message);
@@ -217,13 +207,7 @@ const Login = () => {
           return;
         }
         
-        if (role === "organization") {
-          navigation.replace("OrgDashboard");
-        } else if (role === "lab") {
-          navigation.replace("LabDashboard");
-        } else {
-          navigation.replace("Dashboard");
-        }
+        navigation.replace("SplashScreen");
       }
     } catch (error: any) {
       showAlert("Verification Failed", error.message);
