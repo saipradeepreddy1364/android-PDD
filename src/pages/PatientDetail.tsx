@@ -235,34 +235,22 @@ const PatientDetail = () => {
           const asset = result.assets[0];
 
           try {
-            // Standard React Native way: fetch the local URI into a native Blob
-            const response = await fetch(asset.uri);
-            const blob = await response.blob();
-            await uploadFile(asset.name, asset.mimeType || 'application/octet-stream', blob);
-          } catch (blobErr: any) {
-            // Fallback: Use expo-file-system to read file content as base64, then decode to Uint8Array.
-            try {
-              const FileSystem = await import('expo-file-system');
-              const base64 = await (FileSystem as any).readAsStringAsync(asset.uri, {
-                encoding: 'base64',
-              });
+            const FileSystem = await import('expo-file-system');
+            const base64 = await (FileSystem as any).readAsStringAsync(asset.uri, {
+              encoding: (FileSystem as any).EncodingType.Base64 || 'base64',
+            });
 
-              // Decode base64 → Uint8Array.
-              // atob() is available in all modern browsers and Expo (Hermes engine).
-              const binaryStr = atob(base64);
-              const bytes = new Uint8Array(binaryStr.length);
-              for (let i = 0; i < binaryStr.length; i++) {
-                bytes[i] = binaryStr.charCodeAt(i);
-              }
-              await uploadFile(asset.name, asset.mimeType || 'application/octet-stream', bytes);
-            } catch (fsErr: any) {
-              const fileObject = {
-                uri: asset.uri,
-                name: asset.name,
-                type: asset.mimeType || 'application/octet-stream',
-              };
-              await uploadFile(asset.name, asset.mimeType || 'application/octet-stream', fileObject);
+            // Decode base64 → ArrayBuffer
+            // atob() is available in all modern browsers and Expo (Hermes engine).
+            const binaryStr = atob(base64);
+            const bytes = new Uint8Array(binaryStr.length);
+            for (let i = 0; i < binaryStr.length; i++) {
+              bytes[i] = binaryStr.charCodeAt(i);
             }
+            await uploadFile(asset.name, asset.mimeType || 'application/octet-stream', bytes.buffer);
+          } catch (fsErr: any) {
+            console.error("File system read error:", fsErr);
+            alert("Could not read chosen file: " + fsErr.message);
           }
         } catch (err: any) {
           alert('Could not open file picker: ' + err.message);
