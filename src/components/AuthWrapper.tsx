@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { Clock, AlertCircle, LogOut, CheckCircle } from "lucide-react-native";
 
 export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [session, setSession] = useState<any>(null);
   
@@ -115,7 +115,17 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
   }, [showRejectedPopup]);
 
   if (loading) {
-    return <>{children}</>;
+    return (
+      <View style={styles.splashContainer}>
+        <View style={styles.logoWrapper}>
+          <Image 
+            source={APP_LOGO}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+      </View>
+    );
   }
 
   if (showSuccessPopup) {
