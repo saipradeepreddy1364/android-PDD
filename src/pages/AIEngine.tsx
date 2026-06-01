@@ -603,82 +603,7 @@ Your response must be a JSON object with EXACTLY the following structure (do not
           from the backend dataset.
         </Text>
 
-        {/* Patient Case Selector */}
-        <View style={{ gap: 8 }}>
-          <TouchableOpacity
-            style={styles.patientSelector}
-            onPress={() => setShowCasePicker(true)}
-          >
-            <FileSearch size={16} color="#8B5CF6" />
-            <Text style={styles.patientSelectorText}>
-              {selectedCase ? selectedCase.patient_name : "Select a Patient Case"}
-            </Text>
-            <ChevronDown size={16} color="#94A3B8" />
-          </TouchableOpacity>
 
-          {selectedCase && (
-            <TouchableOpacity
-              onPress={handleAutoSelectFields}
-              disabled={autoSelecting || loadingProcedures}
-              style={[
-                styles.autoSelectBtn,
-                autoSelecting && { opacity: 0.7 }
-              ]}
-            >
-              {autoSelecting ? (
-                <ActivityIndicator size="small" color="#8B5CF6" />
-              ) : (
-                <Sparkles size={14} color="#8B5CF6" />
-              )}
-              <Text style={styles.autoSelectBtnText}>
-                {autoSelecting ? "AI Matching Case..." : "Auto-Select Procedure & Steps with Groq AI"}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Patient Picker Modal */}
-        <Modal visible={showCasePicker} transparent animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalSheet}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Select Patient Case</Text>
-                <TouchableOpacity onPress={() => setShowCasePicker(false)}>
-                  <X size={20} color="#64748B" />
-                </TouchableOpacity>
-              </View>
-              <ScrollView>
-                {cases.length === 0 ? (
-                  <Text style={styles.emptyPickerText}>
-                    No cases found. Add cases from the Records page.
-                  </Text>
-                ) : (
-                  cases.map((c) => (
-                    <TouchableOpacity
-                      key={c.id}
-                      style={styles.casePickerItem}
-                      onPress={() => handleSelectCase(c)}
-                    >
-                      <View style={styles.casePickerAvatar}>
-                        <Text style={styles.casePickerAvatarText}>
-                          {c.patient_name?.charAt(0)}
-                        </Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.casePickerName}>
-                          {c.patient_name}
-                        </Text>
-                        <Text style={styles.casePickerMeta}>
-                          Tooth {c.tooth_number} · {c.diagnosis}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))
-                )}
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
 
         {/* Procedure Picker Modal */}
         <Modal visible={showProcPicker} transparent animationType="slide">
@@ -1016,7 +941,7 @@ Your response must be a JSON object with EXACTLY the following structure (do not
               <Sparkles size={16} color="#FFFFFF" />
             )}
             <Text style={styles.groqButtonText}>
-              {groqLoading ? "Generating AI Recommendation..." : "Get Groq AI Suggestion"}
+              {groqLoading ? "Generating AI Recommendation..." : "AI Suggestion"}
             </Text>
           </TouchableOpacity>
 
