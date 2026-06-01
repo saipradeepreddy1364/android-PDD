@@ -9,8 +9,8 @@ export const InAppUpdateModal = () => {
   const [status, setStatus] = useState("");
 
   useEffect(() => {
-    // Only check in production builds (not in Expo Go/local development or on Web)
-    if (__DEV__ || Platform.OS === "web") return;
+    // Only check if updates are enabled in this build (e.g. in built APK/IPAs, not in local Metro dev or Web)
+    if (!Updates.isEnabled || Platform.OS === "web") return;
 
     const checkUpdates = async () => {
       try {
