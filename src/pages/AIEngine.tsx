@@ -889,40 +889,7 @@ Your response must be a JSON object with EXACTLY the following structure (do not
           </TouchableOpacity>
         </View>
 
-        {/* Groq API Key Input Card */}
-        {(!groqKey || showKeyInput) && (
-          <View style={styles.keyConfigCard}>
-            <View style={styles.keyConfigHeader}>
-              <Key size={16} color="#B45309" />
-              <Text style={styles.keyConfigTitle}>Configure Groq API Key</Text>
-              {groqKey ? (
-                <TouchableOpacity onPress={() => setShowKeyInput(false)} style={{ marginLeft: "auto" }}>
-                  <X size={16} color="#64748B" />
-                </TouchableOpacity>
-              ) : null}
-            </View>
-            <Text style={styles.keyConfigDesc}>
-              Groq AI runs locally inside your app for hyper-fast clinical recommendations. 
-              Get your key for free from console.groq.com.
-            </Text>
-            <View style={styles.keyInputRow}>
-              <TextInput
-                style={styles.keyInput}
-                placeholder="gsk_..."
-                placeholderTextColor="#94A3B8"
-                secureTextEntry={true}
-                value={groqKey === "YOUR_GROQ_KEY_HERE" ? "" : groqKey}
-                onChangeText={setGroqKey}
-              />
-              <TouchableOpacity 
-                style={styles.saveKeyBtn}
-                onPress={() => handleSaveKey(groqKey)}
-              >
-                <Text style={styles.saveKeyBtnText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+
 
         {/* Groq AI Section */}
         <View style={styles.groqSection}>
@@ -945,15 +912,7 @@ Your response must be a JSON object with EXACTLY the following structure (do not
             </Text>
           </TouchableOpacity>
 
-          {groqKey ? (
-            <TouchableOpacity 
-              onPress={() => setShowKeyInput(!showKeyInput)}
-              style={styles.settingsLink}
-            >
-              <Key size={10} color="#64748B" />
-              <Text style={styles.settingsLinkText}>Update Groq API Key</Text>
-            </TouchableOpacity>
-          ) : null}
+
         </View>
 
         {/* Groq AI Error */}
