@@ -19,7 +19,12 @@ import {
   RefreshCw,
   AlertCircle,
   CheckCircle2,
+  Sparkles,
+  Brain,
+  Key,
+  Info,
 } from "lucide-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 import {
@@ -60,6 +65,14 @@ const AIEngine = () => {
   const [loadingSteps, setLoadingSteps] = useState(false);
   const [showStepPicker, setShowStepPicker] = useState(false);
 
+  // ── Groq AI States ────────────────────────────────────────────────────────
+  const [groqKey, setGroqKey] = useState("");
+  const [showKeyInput, setShowKeyInput] = useState(false);
+  const [groqSuggestion, setGroqSuggestion] = useState<any | null>(null);
+  const [groqLoading, setGroqLoading] = useState(false);
+  const [groqError, setGroqError] = useState<string | null>(null);
+  const [autoSelecting, setAutoSelecting] = useState(false);
+
   // ── Load procedures on mount ──────────────────────────────────────────────
   useEffect(() => {
     const loadProcedures = async () => {
@@ -76,6 +89,277 @@ const AIEngine = () => {
     };
     loadProcedures();
   }, []);
+
+  // ── Load saved Groq key on mount ──────────────────────────────────────────
+  useEffect(() => {
+    const loadSavedKey = async () => {
+      try {
+        const savedKey = await AsyncStorage.getItem("CLINIC_GROQ_API_KEY");
+        if (savedKey) {
+          setGroqKey(savedKey);
+        } else {
+          // Check environment variables
+          let envKey = "";
+          try {
+            // @ts-ignore
+            envKey = import.meta.env.VITE_GROQ_API_KEY || "";
+          } catch (e) {}
+          if (!envKey) {
+            envKey = process.env.GROQ_API_KEY || process.env.EXPO_PUBLIC_GROQ_API_KEY || "";
+          }
+          if (envKey && envKey !== "YOUR_GROQ_KEY_HERE") {
+            setGroqKey(envKey);
+          }
+        }
+      } catch (e) {
+        console.error("Error loading saved key:", e);
+      }
+    };
+    loadSavedKey();
+  }, []);
+
+  const handleSaveKey = async (key: string) => {
+    const trimmed = key.trim();
+    setGroqKey(trimmed);
+    try {
+      await AsyncStorage.setItem("CLINIC_GROQ_API_KEY", trimmed);
+      alert("Groq API Key saved successfully!");
+      setShowKeyInput(false);
+    } catch (e) {
+      alert("Failed to save key locally.");
+    }
+  };
+
+  const handleGetGroqSuggestion = async () => {
+    const keyToUse = groqKey.trim();
+    if (!keyToUse || keyToUse === "YOUR_GROQ_KEY_HERE") {
+      setShowKeyInput(true);
+      alert("Please enter a valid Groq API Key first.");
+      return;
+    }
+
+    if (!selectedProcedure || !selectedSubtype) {
+      alert("Please select a procedure and subtype first so the AI has context.");
+      return;
+    }
+
+    setGroqLoading(true);
+    setGroqError(null);
+    setGroqSuggestion(null);
+
+    const caseDetails = selectedCase 
+      ? `Patient: ${selectedCase.patient_name}\nDiagnosis: ${selectedCase.diagnosis}\nTooth Number: ${selectedCase.tooth_number}\n${fileAnalysis ? `Report/File Analysis: ${fileAnalysis}` : ""}`
+      : "No specific patient case selected.";
+
+    const currentStepCtx = currentStepInput 
+      ? `Current Completed Step: ${currentStepInput}`
+      : "Start of procedure (no current step completed yet).";
+
+    const promptText = `
+Analyze this clinical situation and recommend the precise next step for the dentist:
+
+[PROCEDURE DETAILS]
+- Category: ${selectedProcedure}
+- Treatment Subtype: ${selectedSubtype}
+
+[PATIENT CLINICAL CONTEXT]
+${caseDetails}
+
+[CURRENT TREATMENT PROGRESS]
+${currentStepCtx}
+
+Your response must be a JSON object with EXACTLY the following structure (do not wrap in markdown blocks, respond only with the JSON object):
+{
+  "suggested_step_name": "String - the concise name of the recommended next step",
+  "suggested_step_number": Number - logical step index in the sequence (e.g. 1, 2, 3...) or increment from current step index,
+  "clinical_description": "String - comprehensive clinical overview and rationale of this step",
+  "clinical_instructions": "String - highly detailed, step-by-step professional instructions for the dentist",
+  "clinical_precautions": ["Array of Strings - critical safety warnings, pitfalls to avoid, or check-points"],
+  "instruments_required": ["Array of Strings - specific dental burs, materials, instruments, or irrigants required"],
+  "confidence": Number - confidence level from 0 to 100 based on diagnosis and clinical standards,
+  "rationale": "String - explanation of why this step is appropriate for this patient's case"
+}
+`;
+
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${keyToUse}`
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: [
+            {
+              role: "system",
+              content: "You are an expert clinical dental advisor. You must output strictly valid JSON conforming to the requested schema. Do not output any thinking or conversational text."
+            },
+            {
+              role: "user",
+              content: promptText
+            }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.2,
+          max_tokens: 1500
+        })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`API Error (${response.status}): ${errText}`);
+      }
+
+      const data = await response.json();
+      const rawText = data.choices[0].message.content;
+      const parsed = JSON.parse(rawText);
+      setGroqSuggestion(parsed);
+    } catch (err: any) {
+      console.error("Groq API error:", err);
+      setGroqError(err.message || "Failed to generate AI suggestion. Check your API key or network connection.");
+    } finally {
+      setGroqLoading(false);
+    }
+  };
+
+  const handleAutoSelectFields = async () => {
+    if (!selectedCase) {
+      alert("Please select a Patient Case first so the AI can analyze the case details.");
+      return;
+    }
+
+    const keyToUse = groqKey.trim();
+    if (!keyToUse || keyToUse === "YOUR_GROQ_KEY_HERE") {
+      setShowKeyInput(true);
+      alert("Please enter a valid Groq API Key first.");
+      return;
+    }
+
+    setAutoSelecting(true);
+    setGroqError(null);
+
+    // Build lists of available procedures and their subtypes
+    const availableSchema = Object.entries(proceduresMap).reduce((acc: any, [proc, subtypes]) => {
+      acc[proc] = subtypes;
+      return acc;
+    }, {});
+
+    const patientContext = `
+Patient: ${selectedCase.patient_name}
+Tooth Number: ${selectedCase.tooth_number}
+Diagnosis: ${selectedCase.diagnosis}
+${fileAnalysis ? `Clinical Files/Radiograph Analysis: ${fileAnalysis}` : ""}
+`;
+
+    const promptText = `
+Analyze the patient's dental diagnosis and medical files, then select the most appropriate treatment procedure and subtype from the list of available categories.
+
+[PATIENT CLINICAL CONTEXT]
+${patientContext}
+
+[AVAILABLE PROCEDURES AND SUBTYPES]
+${JSON.stringify(availableSchema, null, 2)}
+
+Select the SINGLE best matching procedure and the SINGLE best matching subtype from the lists above.
+Also, recommend a starting "Current Step" for this patient.
+
+Your response must be a JSON object with EXACTLY the following structure (do not wrap in markdown blocks, respond only with the JSON object):
+{
+  "matched_procedure": "String - must match exactly one of the keys in the procedures list above (case-insensitive)",
+  "matched_subtype": "String - must match exactly one of the subtypes under the selected procedure key (case-insensitive)",
+  "suggested_current_step": "String - a suitable starting step for this stage (e.g. 'Diagnosis', 'Preparation', 'Access Cavity')"
+}
+`;
+
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${keyToUse}`
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: [
+            {
+              role: "system",
+              content: "You are an expert clinical dental system. You must output strictly valid JSON matching the schema and choosing from the exact allowed lists."
+            },
+            {
+              role: "user",
+              content: promptText
+            }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.1,
+          max_tokens: 500
+        })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`API Error (${response.status}): ${errText}`);
+      }
+
+      const data = await response.json();
+      const parsed = JSON.parse(data.choices[0].message.content);
+
+      const aiProc = (parsed.matched_procedure || "").trim().toLowerCase();
+      const aiSubtype = (parsed.matched_subtype || "").trim().toLowerCase();
+      const aiStep = (parsed.suggested_current_step || "").trim();
+
+      // Find best match in our actual list
+      const actualProcKey = Object.keys(proceduresMap).find(
+        (p) => p.toLowerCase() === aiProc
+      );
+
+      if (actualProcKey) {
+        setSelectedProcedure(actualProcKey);
+        
+        // Find best match for subtype
+        const subtypes = proceduresMap[actualProcKey] || [];
+        const actualSubtype = subtypes.find(
+          (s) => s.toLowerCase() === aiSubtype
+        );
+        
+        if (actualSubtype) {
+          setSelectedSubtype(actualSubtype);
+          if (aiStep) {
+            setCurrentStepInput(aiStep);
+          }
+          
+          alert(`AI Auto-Selected:\nProcedure: ${actualProcKey}\nSubtype: ${actualSubtype}\nStep: ${aiStep || "Start"}`);
+          
+          // Trigger get workflow automatically
+          setWorkflowLoading(true);
+          setWorkflowResult(null);
+          setWorkflowError(null);
+          try {
+            const result = await fetchWorkflow(actualProcKey, actualSubtype);
+            setWorkflowResult(result);
+          } catch (err: any) {
+            setWorkflowError(err.message || "Failed to fetch workflow from server.");
+          } finally {
+            setWorkflowLoading(false);
+          }
+        } else {
+          // Fallback if subtype is not exactly matched, pick first
+          if (subtypes.length > 0) {
+            setSelectedSubtype(subtypes[0]);
+            alert(`AI selected Procedure "${actualProcKey}", but recommended subtype "${aiSubtype}" was not found. Selected first available subtype: "${subtypes[0]}".`);
+          }
+        }
+      } else {
+        throw new Error(`AI returned procedure "${parsed.matched_procedure}", which does not match any of our allowed clinical procedures.`);
+      }
+    } catch (err: any) {
+      console.error("Auto select fields error:", err);
+      alert("Groq AI Auto-Select failed: " + (err.message || "Please check your Groq API Key or network."));
+    } finally {
+      setAutoSelecting(false);
+    }
+  };
 
   // ── Load patient cases ────────────────────────────────────────────────────
   useEffect(() => {
@@ -320,16 +604,38 @@ const AIEngine = () => {
         </Text>
 
         {/* Patient Case Selector */}
-        <TouchableOpacity
-          style={styles.patientSelector}
-          onPress={() => setShowCasePicker(true)}
-        >
-          <FileSearch size={16} color="#8B5CF6" />
-          <Text style={styles.patientSelectorText}>
-            {selectedCase ? selectedCase.patient_name : "Select a Patient Case"}
-          </Text>
-          <ChevronDown size={16} color="#94A3B8" />
-        </TouchableOpacity>
+        <View style={{ gap: 8 }}>
+          <TouchableOpacity
+            style={styles.patientSelector}
+            onPress={() => setShowCasePicker(true)}
+          >
+            <FileSearch size={16} color="#8B5CF6" />
+            <Text style={styles.patientSelectorText}>
+              {selectedCase ? selectedCase.patient_name : "Select a Patient Case"}
+            </Text>
+            <ChevronDown size={16} color="#94A3B8" />
+          </TouchableOpacity>
+
+          {selectedCase && (
+            <TouchableOpacity
+              onPress={handleAutoSelectFields}
+              disabled={autoSelecting || loadingProcedures}
+              style={[
+                styles.autoSelectBtn,
+                autoSelecting && { opacity: 0.7 }
+              ]}
+            >
+              {autoSelecting ? (
+                <ActivityIndicator size="small" color="#8B5CF6" />
+              ) : (
+                <Sparkles size={14} color="#8B5CF6" />
+              )}
+              <Text style={styles.autoSelectBtnText}>
+                {autoSelecting ? "AI Matching Case..." : "Auto-Select Procedure & Steps with Groq AI"}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Patient Picker Modal */}
         <Modal visible={showCasePicker} transparent animationType="slide">
@@ -657,6 +963,164 @@ const AIEngine = () => {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Groq API Key Input Card */}
+        {(!groqKey || showKeyInput) && (
+          <View style={styles.keyConfigCard}>
+            <View style={styles.keyConfigHeader}>
+              <Key size={16} color="#B45309" />
+              <Text style={styles.keyConfigTitle}>Configure Groq API Key</Text>
+              {groqKey ? (
+                <TouchableOpacity onPress={() => setShowKeyInput(false)} style={{ marginLeft: "auto" }}>
+                  <X size={16} color="#64748B" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+            <Text style={styles.keyConfigDesc}>
+              Groq AI runs locally inside your app for hyper-fast clinical recommendations. 
+              Get your key for free from console.groq.com.
+            </Text>
+            <View style={styles.keyInputRow}>
+              <TextInput
+                style={styles.keyInput}
+                placeholder="gsk_..."
+                placeholderTextColor="#94A3B8"
+                secureTextEntry={true}
+                value={groqKey === "YOUR_GROQ_KEY_HERE" ? "" : groqKey}
+                onChangeText={setGroqKey}
+              />
+              <TouchableOpacity 
+                style={styles.saveKeyBtn}
+                onPress={() => handleSaveKey(groqKey)}
+              >
+                <Text style={styles.saveKeyBtnText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Groq AI Section */}
+        <View style={styles.groqSection}>
+          <TouchableOpacity
+            onPress={handleGetGroqSuggestion}
+            style={[
+              styles.groqButton,
+              groqLoading && { opacity: 0.7 },
+              (!selectedProcedure || !selectedSubtype) && { opacity: 0.5 }
+            ]}
+            disabled={groqLoading}
+          >
+            {groqLoading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Sparkles size={16} color="#FFFFFF" />
+            )}
+            <Text style={styles.groqButtonText}>
+              {groqLoading ? "Generating AI Recommendation..." : "Get Groq AI Suggestion"}
+            </Text>
+          </TouchableOpacity>
+
+          {groqKey ? (
+            <TouchableOpacity 
+              onPress={() => setShowKeyInput(!showKeyInput)}
+              style={styles.settingsLink}
+            >
+              <Key size={10} color="#64748B" />
+              <Text style={styles.settingsLinkText}>Update Groq API Key</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
+        {/* Groq AI Error */}
+        {groqError && (
+          <View style={styles.errorCard}>
+            <AlertCircle size={16} color="#EF4444" />
+            <Text style={styles.errorCardText}>{groqError}</Text>
+          </View>
+        )}
+
+        {/* Groq AI Suggestion Content Card */}
+        {groqSuggestion && (
+          <View style={styles.groqResultCard}>
+            <View style={styles.groqCardHeader}>
+              <Brain size={18} color="#8B5CF6" />
+              <Text style={styles.groqCardTitle}>Groq AI Clinical Advisor</Text>
+              
+              <View style={[
+                styles.confidenceBadge,
+                {
+                  backgroundColor:
+                    groqSuggestion.confidence >= 85
+                      ? "rgba(16,185,129,0.1)"
+                      : groqSuggestion.confidence >= 65
+                      ? "rgba(245,158,11,0.1)"
+                      : "rgba(239,68,68,0.1)",
+                }
+              ]}>
+                <Text style={[
+                  styles.confidenceBadgeText,
+                  {
+                    color:
+                      groqSuggestion.confidence >= 85
+                        ? "#10B981"
+                        : groqSuggestion.confidence >= 65
+                        ? "#F59E0B"
+                        : "#EF4444",
+                  }
+                ]}>
+                  {groqSuggestion.confidence}% Confidence
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.groqStepBadge}>
+              <Text style={styles.groqStepBadgeNum}>Step {groqSuggestion.suggested_step_number || "•"}</Text>
+              <Text style={styles.groqStepBadgeName}>{groqSuggestion.suggested_step_name}</Text>
+            </View>
+
+            <View style={styles.groqContentGroup}>
+              <Text style={styles.groqContentLabel}>Clinical Overview & Rationale</Text>
+              <Text style={styles.groqContentText}>{groqSuggestion.clinical_description}</Text>
+            </View>
+
+            {groqSuggestion.rationale ? (
+              <View style={styles.groqContentGroup}>
+                <Text style={styles.groqContentLabel}>Case-Specific Rationale</Text>
+                <Text style={styles.groqContentText}>{groqSuggestion.rationale}</Text>
+              </View>
+            ) : null}
+
+            <View style={styles.groqContentGroup}>
+              <Text style={styles.groqContentLabel}>Actionable Instructions</Text>
+              <Text style={styles.groqContentText}>{groqSuggestion.clinical_instructions}</Text>
+            </View>
+
+            {groqSuggestion.instruments_required && groqSuggestion.instruments_required.length > 0 && (
+              <View style={styles.groqContentGroup}>
+                <Text style={styles.groqContentLabel}>Recommended Instruments & Materials</Text>
+                <View style={styles.groqPillsRow}>
+                  {groqSuggestion.instruments_required.map((inst: string, idx: number) => (
+                    <View key={idx} style={styles.groqPill}>
+                      <Text style={styles.groqPillText}>{inst}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {groqSuggestion.clinical_precautions && groqSuggestion.clinical_precautions.length > 0 && (
+              <View style={styles.groqContentGroup}>
+                <Text style={styles.groqContentLabel}>Clinical Precautions & Tips</Text>
+                {groqSuggestion.clinical_precautions.map((prec: string, idx: number) => (
+                  <View key={idx} style={styles.groqPrecautionItem}>
+                    <Info size={12} color="#EF4444" style={{ marginTop: 2 }} />
+                    <Text style={styles.groqPrecautionText}>{prec}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Workflow Error */}
         {workflowError && (
@@ -1286,6 +1750,223 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#8B5CF6",
     marginTop: 4,
+  },
+  // ── AI Auto-Select Styles ──
+  autoSelectBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "rgba(139,92,246,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(139,92,246,0.25)",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignSelf: "flex-start",
+    marginTop: 6,
+  },
+  autoSelectBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#8B5CF6",
+  },
+  // ── Key Config Card ──
+  keyConfigCard: {
+    backgroundColor: "#FFFBEB",
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    gap: 10,
+    marginTop: 10,
+  },
+  keyConfigHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  keyConfigTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#92400E",
+  },
+  keyConfigDesc: {
+    fontSize: 12,
+    color: "#B45309",
+    lineHeight: 18,
+  },
+  keyInputRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  keyInput: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#FCD34D",
+    paddingHorizontal: 12,
+    fontSize: 12,
+    color: "#1E293B",
+    height: 38,
+  },
+  saveKeyBtn: {
+    backgroundColor: "#D97706",
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  saveKeyBtnText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  // ── Groq Section ──
+  groqSection: {
+    gap: 8,
+    marginTop: 10,
+  },
+  groqButton: {
+    width: "100%",
+    backgroundColor: "#7C3AED", // Vibrant Purple
+    height: 48,
+    borderRadius: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    shadowColor: "#7C3AED",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  groqButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  settingsLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 4,
+  },
+  settingsLinkText: {
+    fontSize: 11,
+    color: "#64748B",
+    textDecorationLine: "underline",
+  },
+  // ── Groq Result Card ──
+  groqResultCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(124,58,237,0.18)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    gap: 14,
+    marginTop: 10,
+  },
+  groqCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+    paddingBottom: 10,
+  },
+  groqCardTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#4C1D95",
+    flex: 1,
+  },
+  confidenceBadge: {
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  confidenceBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  groqStepBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F5F3FF",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  groqStepBadgeNum: {
+    backgroundColor: "#7C3AED",
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "800",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    overflow: "hidden",
+  },
+  groqStepBadgeName: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#1E1B4B",
+    flex: 1,
+  },
+  groqContentGroup: {
+    gap: 6,
+  },
+  groqContentLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#475569",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
+  groqContentText: {
+    fontSize: 12,
+    color: "#334155",
+    lineHeight: 18,
+  },
+  groqPillsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 2,
+  },
+  groqPill: {
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  groqPillText: {
+    fontSize: 11,
+    color: "#475569",
+    fontWeight: "500",
+  },
+  groqPrecautionItem: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "flex-start",
+  },
+  groqPrecautionText: {
+    fontSize: 11.5,
+    color: "#E11D48",
+    flex: 1,
+    lineHeight: 16,
   },
 });
 
