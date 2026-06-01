@@ -66,7 +66,11 @@ const App = () => {
                 }}
               >
                 {/* Entry / Splash */}
-                <Stack.Screen name="SplashScreen" component={SplashScreen} />
+                <Stack.Screen 
+                  name="SplashScreen" 
+                  component={SplashScreen} 
+                  options={{ animationEnabled: false }}
+                />
                 
                 {/* Public Routes */}
                 <Stack.Screen name="Login" component={Login} />
