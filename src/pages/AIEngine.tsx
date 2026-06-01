@@ -21,11 +21,10 @@ import {
   CheckCircle2,
   Sparkles,
   Brain,
-  Key,
   Info,
 } from "lucide-react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
+
 import AppLayout from "@/components/AppLayout";
 import {
   fetchProcedures,
@@ -66,8 +65,6 @@ const AIEngine = () => {
   const [showStepPicker, setShowStepPicker] = useState(false);
 
   // ── Groq AI States ────────────────────────────────────────────────────────
-  const [groqKey, setGroqKey] = useState("");
-  const [showKeyInput, setShowKeyInput] = useState(false);
   const [groqSuggestion, setGroqSuggestion] = useState<any | null>(null);
   const [groqLoading, setGroqLoading] = useState(false);
   const [groqError, setGroqError] = useState<string | null>(null);
@@ -90,54 +87,8 @@ const AIEngine = () => {
     loadProcedures();
   }, []);
 
-  // ── Load saved Groq key on mount ──────────────────────────────────────────
-  useEffect(() => {
-    const loadSavedKey = async () => {
-      try {
-        const savedKey = await AsyncStorage.getItem("CLINIC_GROQ_API_KEY");
-        if (savedKey) {
-          setGroqKey(savedKey);
-        } else {
-          // Check environment variables
-          let envKey = "";
-          try {
-            // @ts-ignore
-            envKey = import.meta.env.VITE_GROQ_API_KEY || "";
-          } catch (e) {}
-          if (!envKey) {
-            envKey = process.env.GROQ_API_KEY || process.env.EXPO_PUBLIC_GROQ_API_KEY || "";
-          }
-          if (envKey && envKey !== "YOUR_GROQ_KEY_HERE") {
-            setGroqKey(envKey);
-          }
-        }
-      } catch (e) {
-        console.error("Error loading saved key:", e);
-      }
-    };
-    loadSavedKey();
-  }, []);
-
-  const handleSaveKey = async (key: string) => {
-    const trimmed = key.trim();
-    setGroqKey(trimmed);
-    try {
-      await AsyncStorage.setItem("CLINIC_GROQ_API_KEY", trimmed);
-      alert("Groq API Key saved successfully!");
-      setShowKeyInput(false);
-    } catch (e) {
-      alert("Failed to save key locally.");
-    }
-  };
 
   const handleGetGroqSuggestion = async () => {
-    const keyToUse = groqKey.trim();
-    if (!keyToUse || keyToUse === "YOUR_GROQ_KEY_HERE") {
-      setShowKeyInput(true);
-      alert("Please enter a valid Groq API Key first.");
-      return;
-    }
-
     if (!selectedProcedure || !selectedSubtype) {
       alert("Please select a procedure and subtype first so the AI has context.");
       return;
@@ -155,54 +106,17 @@ const AIEngine = () => {
       ? `Current Completed Step: ${currentStepInput}`
       : "Start of procedure (no current step completed yet).";
 
-    const promptText = `
-Analyze this clinical situation and recommend the precise next step for the dentist:
-
-[PROCEDURE DETAILS]
-- Category: ${selectedProcedure}
-- Treatment Subtype: ${selectedSubtype}
-
-[PATIENT CLINICAL CONTEXT]
-${caseDetails}
-
-[CURRENT TREATMENT PROGRESS]
-${currentStepCtx}
-
-Your response must be a JSON object with EXACTLY the following structure (do not wrap in markdown blocks, respond only with the JSON object):
-{
-  "suggested_step_name": "String - the concise name of the recommended next step",
-  "suggested_step_number": Number - logical step index in the sequence (e.g. 1, 2, 3...) or increment from current step index,
-  "clinical_description": "String - comprehensive clinical overview and rationale of this step",
-  "clinical_instructions": "String - highly detailed, step-by-step professional instructions for the dentist",
-  "clinical_precautions": ["Array of Strings - critical safety warnings, pitfalls to avoid, or check-points"],
-  "instruments_required": ["Array of Strings - specific dental burs, materials, instruments, or irrigants required"],
-  "confidence": Number - confidence level from 0 to 100 based on diagnosis and clinical standards,
-  "rationale": "String - explanation of why this step is appropriate for this patient's case"
-}
-`;
-
     try {
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || "https://pdd-backend-ztqc.onrender.com";
+      const response = await fetch(`${backendUrl}/api/ai-suggestion`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${keyToUse}`
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages: [
-            {
-              role: "system",
-              content: "You are an expert clinical dental advisor. You must output strictly valid JSON conforming to the requested schema. Do not output any thinking or conversational text."
-            },
-            {
-              role: "user",
-              content: promptText
-            }
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.2,
-          max_tokens: 1500
+          procedure: selectedProcedure,
+          subtype: selectedSubtype,
+          current_step: currentStepInput || "",
+          case_details: caseDetails,
+          current_step_context: currentStepCtx,
         })
       });
 
@@ -212,27 +126,20 @@ Your response must be a JSON object with EXACTLY the following structure (do not
       }
 
       const data = await response.json();
-      const rawText = data.choices[0].message.content;
-      const parsed = JSON.parse(rawText);
-      setGroqSuggestion(parsed);
+      setGroqSuggestion(data);
     } catch (err: any) {
       console.error("Groq API error:", err);
-      setGroqError(err.message || "Failed to generate AI suggestion. Check your API key or network connection.");
+      setGroqError(err.message || "Failed to generate AI suggestion. Check network connection.");
     } finally {
       setGroqLoading(false);
     }
   };
 
+
+
   const handleAutoSelectFields = async () => {
     if (!selectedCase) {
       alert("Please select a Patient Case first so the AI can analyze the case details.");
-      return;
-    }
-
-    const keyToUse = groqKey.trim();
-    if (!keyToUse || keyToUse === "YOUR_GROQ_KEY_HERE") {
-      setShowKeyInput(true);
-      alert("Please enter a valid Groq API Key first.");
       return;
     }
 
@@ -252,48 +159,14 @@ Diagnosis: ${selectedCase.diagnosis}
 ${fileAnalysis ? `Clinical Files/Radiograph Analysis: ${fileAnalysis}` : ""}
 `;
 
-    const promptText = `
-Analyze the patient's dental diagnosis and medical files, then select the most appropriate treatment procedure and subtype from the list of available categories.
-
-[PATIENT CLINICAL CONTEXT]
-${patientContext}
-
-[AVAILABLE PROCEDURES AND SUBTYPES]
-${JSON.stringify(availableSchema, null, 2)}
-
-Select the SINGLE best matching procedure and the SINGLE best matching subtype from the lists above.
-Also, recommend a starting "Current Step" for this patient.
-
-Your response must be a JSON object with EXACTLY the following structure (do not wrap in markdown blocks, respond only with the JSON object):
-{
-  "matched_procedure": "String - must match exactly one of the keys in the procedures list above (case-insensitive)",
-  "matched_subtype": "String - must match exactly one of the subtypes under the selected procedure key (case-insensitive)",
-  "suggested_current_step": "String - a suitable starting step for this stage (e.g. 'Diagnosis', 'Preparation', 'Access Cavity')"
-}
-`;
-
     try {
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || "https://pdd-backend-ztqc.onrender.com";
+      const response = await fetch(`${backendUrl}/api/auto-select`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${keyToUse}`
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages: [
-            {
-              role: "system",
-              content: "You are an expert clinical dental system. You must output strictly valid JSON matching the schema and choosing from the exact allowed lists."
-            },
-            {
-              role: "user",
-              content: promptText
-            }
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.1,
-          max_tokens: 500
+          patient_context: patientContext,
+          available_schema: availableSchema,
         })
       });
 
@@ -302,8 +175,7 @@ Your response must be a JSON object with EXACTLY the following structure (do not
         throw new Error(`API Error (${response.status}): ${errText}`);
       }
 
-      const data = await response.json();
-      const parsed = JSON.parse(data.choices[0].message.content);
+      const parsed = await response.json();
 
       const aiProc = (parsed.matched_procedure || "").trim().toLowerCase();
       const aiSubtype = (parsed.matched_subtype || "").trim().toLowerCase();
@@ -355,11 +227,12 @@ Your response must be a JSON object with EXACTLY the following structure (do not
       }
     } catch (err: any) {
       console.error("Auto select fields error:", err);
-      alert("Groq AI Auto-Select failed: " + (err.message || "Please check your Groq API Key or network."));
+      alert("AI Auto-Select failed: " + (err.message || "Check network connection."));
     } finally {
       setAutoSelecting(false);
     }
   };
+
 
   // ── Load patient cases ────────────────────────────────────────────────────
   useEffect(() => {
