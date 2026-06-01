@@ -115,17 +115,7 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
   }, [showRejectedPopup]);
 
   if (loading) {
-    return (
-      <View style={styles.splashContainer}>
-        <View style={styles.logoWrapper}>
-          <Image 
-            source={APP_LOGO}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-      </View>
-    );
+    return <>{children}</>;
   }
 
   if (showSuccessPopup) {
