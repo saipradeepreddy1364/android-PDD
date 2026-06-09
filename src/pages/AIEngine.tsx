@@ -802,32 +802,7 @@ ${fileAnalysis ? `Clinical Files/Radiograph Analysis: ${fileAnalysis}` : ""}
             <View style={styles.groqCardHeader}>
               <Brain size={18} color="#8B5CF6" />
               <Text style={styles.groqCardTitle}>Groq AI Clinical Advisor</Text>
-              
-              <View style={[
-                styles.confidenceBadge,
-                {
-                  backgroundColor:
-                    groqSuggestion.confidence >= 85
-                      ? "rgba(16,185,129,0.1)"
-                      : groqSuggestion.confidence >= 65
-                      ? "rgba(245,158,11,0.1)"
-                      : "rgba(239,68,68,0.1)",
-                }
-              ]}>
-                <Text style={[
-                  styles.confidenceBadgeText,
-                  {
-                    color:
-                      groqSuggestion.confidence >= 85
-                        ? "#10B981"
-                        : groqSuggestion.confidence >= 65
-                        ? "#F59E0B"
-                        : "#EF4444",
-                  }
-                ]}>
-                  {groqSuggestion.confidence}% Confidence
-                </Text>
-              </View>
+
             </View>
 
             <View style={styles.groqStepBadge}>
@@ -940,35 +915,7 @@ ${fileAnalysis ? `Clinical Files/Radiograph Analysis: ${fileAnalysis}` : ""}
                       <Text style={styles.stepCurrentName}>
                         {step.current_step}
                       </Text>
-                      <View
-                        style={[
-                          styles.confidencePill,
-                          {
-                            backgroundColor:
-                              step.confidence >= 80
-                                ? "#DCFCE7"
-                                : step.confidence >= 50
-                                ? "#FEF3C7"
-                                : "#FEE2E2",
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.confidenceText,
-                            {
-                              color:
-                                step.confidence >= 80
-                                  ? "#15803D"
-                                  : step.confidence >= 50
-                                  ? "#B45309"
-                                  : "#B91C1C",
-                            },
-                          ]}
-                        >
-                          {step.confidence}%
-                        </Text>
-                      </View>
+
                     </View>
 
                     {/* Current step description */}
@@ -991,10 +938,7 @@ ${fileAnalysis ? `Clinical Files/Radiograph Analysis: ${fileAnalysis}` : ""}
                       </View>
                     )}
 
-                    {/* Source badge */}
-                    <View style={styles.sourceBadge}>
-                      <Text style={styles.sourceText}>{step.source}</Text>
-                    </View>
+
                   </View>
                 </View>
               );
