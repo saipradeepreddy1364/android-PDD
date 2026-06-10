@@ -417,8 +417,7 @@ ${fileAnalysis ? `Clinical Files/Radiograph Analysis: ${fileAnalysis}` : ""}
         keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.description}>
-          Select a procedure and subtype to fetch the complete clinical workflow
-          from the backend dataset.
+          Select a procedure and subtype to fetch the complete clinical workflow.
         </Text>
 
 
