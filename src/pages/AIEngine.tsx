@@ -19,9 +19,6 @@ import {
   RefreshCw,
   AlertCircle,
   CheckCircle2,
-  Sparkles,
-  Brain,
-  Info,
 } from "lucide-react-native";
 import { supabase } from "@/lib/supabase";
 
@@ -64,10 +61,6 @@ const AIEngine = () => {
   const [loadingSteps, setLoadingSteps] = useState(false);
   const [showStepPicker, setShowStepPicker] = useState(false);
 
-  // ── Groq AI States ────────────────────────────────────────────────────────
-  const [groqSuggestion, setGroqSuggestion] = useState<any | null>(null);
-  const [groqLoading, setGroqLoading] = useState(false);
-  const [groqError, setGroqError] = useState<string | null>(null);
   const [autoSelecting, setAutoSelecting] = useState(false);
 
   // ── Load procedures on mount ──────────────────────────────────────────────
@@ -88,53 +81,6 @@ const AIEngine = () => {
   }, []);
 
 
-  const handleGetGroqSuggestion = async () => {
-    if (!selectedProcedure || !selectedSubtype) {
-      alert("Please select a procedure and subtype first so the AI has context.");
-      return;
-    }
-
-    setGroqLoading(true);
-    setGroqError(null);
-    setGroqSuggestion(null);
-
-    const caseDetails = selectedCase 
-      ? `Patient: ${selectedCase.patient_name}\nDiagnosis: ${selectedCase.diagnosis}\nTooth Number: ${selectedCase.tooth_number}\n${fileAnalysis ? `Report/File Analysis: ${fileAnalysis}` : ""}`
-      : "No specific patient case selected.";
-
-    const currentStepCtx = currentStepInput 
-      ? `Current Completed Step: ${currentStepInput}`
-      : "Start of procedure (no current step completed yet).";
-
-    try {
-      const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL || "https://pdd-backend-ztqc.onrender.com";
-      const response = await fetch(`${backendUrl}/api/ai-suggestion`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          procedure: selectedProcedure,
-          subtype: selectedSubtype,
-          current_step: currentStepInput || "",
-          case_details: caseDetails,
-          current_step_context: currentStepCtx,
-        })
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`API Error (${response.status}): ${errText}`);
-      }
-
-      const data = await response.json();
-      setGroqSuggestion(data);
-    } catch (err: any) {
-      console.error("Groq API error:", err);
-      setGroqError(err.message || "Failed to generate AI suggestion. Check network connection.");
-    } finally {
-      setGroqLoading(false);
-    }
-  };
-
 
 
   const handleAutoSelectFields = async () => {
@@ -144,7 +90,6 @@ const AIEngine = () => {
     }
 
     setAutoSelecting(true);
-    setGroqError(null);
 
     // Build lists of available procedures and their subtypes
     const availableSchema = Object.entries(proceduresMap).reduce((acc: any, [proc, subtypes]) => {
@@ -764,95 +709,7 @@ ${fileAnalysis ? `Clinical Files/Radiograph Analysis: ${fileAnalysis}` : ""}
 
 
 
-        {/* Groq AI Section */}
-        <View style={styles.groqSection}>
-          <TouchableOpacity
-            onPress={handleGetGroqSuggestion}
-            style={[
-              styles.groqButton,
-              groqLoading && { opacity: 0.7 },
-              (!selectedProcedure || !selectedSubtype) && { opacity: 0.5 }
-            ]}
-            disabled={groqLoading}
-          >
-            {groqLoading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Sparkles size={16} color="#FFFFFF" />
-            )}
-            <Text style={styles.groqButtonText}>
-              {groqLoading ? "Generating AI Recommendation..." : "AI Suggestion"}
-            </Text>
-          </TouchableOpacity>
 
-
-        </View>
-
-        {/* Groq AI Error */}
-        {groqError && (
-          <View style={styles.errorCard}>
-            <AlertCircle size={16} color="#EF4444" />
-            <Text style={styles.errorCardText}>{groqError}</Text>
-          </View>
-        )}
-
-        {/* Groq AI Suggestion Content Card */}
-        {groqSuggestion && (
-          <View style={styles.groqResultCard}>
-            <View style={styles.groqCardHeader}>
-              <Brain size={18} color="#8B5CF6" />
-              <Text style={styles.groqCardTitle}>Groq AI Clinical Advisor</Text>
-
-            </View>
-
-            <View style={styles.groqStepBadge}>
-              <Text style={styles.groqStepBadgeNum}>Step {groqSuggestion.suggested_step_number || "•"}</Text>
-              <Text style={styles.groqStepBadgeName}>{groqSuggestion.suggested_step_name}</Text>
-            </View>
-
-            <View style={styles.groqContentGroup}>
-              <Text style={styles.groqContentLabel}>Clinical Overview & Rationale</Text>
-              <Text style={styles.groqContentText}>{groqSuggestion.clinical_description}</Text>
-            </View>
-
-            {groqSuggestion.rationale ? (
-              <View style={styles.groqContentGroup}>
-                <Text style={styles.groqContentLabel}>Case-Specific Rationale</Text>
-                <Text style={styles.groqContentText}>{groqSuggestion.rationale}</Text>
-              </View>
-            ) : null}
-
-            <View style={styles.groqContentGroup}>
-              <Text style={styles.groqContentLabel}>Actionable Instructions</Text>
-              <Text style={styles.groqContentText}>{groqSuggestion.clinical_instructions}</Text>
-            </View>
-
-            {groqSuggestion.instruments_required && groqSuggestion.instruments_required.length > 0 && (
-              <View style={styles.groqContentGroup}>
-                <Text style={styles.groqContentLabel}>Recommended Instruments & Materials</Text>
-                <View style={styles.groqPillsRow}>
-                  {groqSuggestion.instruments_required.map((inst: string, idx: number) => (
-                    <View key={idx} style={styles.groqPill}>
-                      <Text style={styles.groqPillText}>{inst}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {groqSuggestion.clinical_precautions && groqSuggestion.clinical_precautions.length > 0 && (
-              <View style={styles.groqContentGroup}>
-                <Text style={styles.groqContentLabel}>Clinical Precautions & Tips</Text>
-                {groqSuggestion.clinical_precautions.map((prec: string, idx: number) => (
-                  <View key={idx} style={styles.groqPrecautionItem}>
-                    <Info size={12} color="#EF4444" style={{ marginTop: 2 }} />
-                    <Text style={styles.groqPrecautionText}>{prec}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        )}
 
         {/* Workflow Error */}
         {workflowError && (
@@ -1524,31 +1381,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
-  // ── Groq Section ──
-  groqSection: {
-    gap: 8,
-    marginTop: 10,
-  },
-  groqButton: {
-    width: "100%",
-    backgroundColor: "#7C3AED", // Vibrant Purple
-    height: 48,
-    borderRadius: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    shadowColor: "#7C3AED",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  groqButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600",
-  },
   settingsLink: {
     flexDirection: "row",
     alignItems: "center",
@@ -1560,114 +1392,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#64748B",
     textDecorationLine: "underline",
-  },
-  // ── Groq Result Card ──
-  groqResultCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "rgba(124,58,237,0.18)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    gap: 14,
-    marginTop: 10,
-  },
-  groqCardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-    paddingBottom: 10,
-  },
-  groqCardTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#4C1D95",
-    flex: 1,
-  },
-  confidenceBadge: {
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  confidenceBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  groqStepBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F5F3FF",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
-  },
-  groqStepBadgeNum: {
-    backgroundColor: "#7C3AED",
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "800",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    overflow: "hidden",
-  },
-  groqStepBadgeName: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#1E1B4B",
-    flex: 1,
-  },
-  groqContentGroup: {
-    gap: 6,
-  },
-  groqContentLabel: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#475569",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-  },
-  groqContentText: {
-    fontSize: 12,
-    color: "#334155",
-    lineHeight: 18,
-  },
-  groqPillsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginTop: 2,
-  },
-  groqPill: {
-    backgroundColor: "#F1F5F9",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  groqPillText: {
-    fontSize: 11,
-    color: "#475569",
-    fontWeight: "500",
-  },
-  groqPrecautionItem: {
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "flex-start",
-  },
-  groqPrecautionText: {
-    fontSize: 11.5,
-    color: "#E11D48",
-    flex: 1,
-    lineHeight: 16,
   },
 });
 
