@@ -91,24 +91,8 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
       if (labCases) setLabPendingCases(labCases);
 
     } else if (sess.role === 'doctor') {
-      // Fetch recent case updates for doctors
-      const { data: cases } = await supabase
-        .from('cases')
-        .select('id, patient_name, tooth_number, diagnosis, is_urgent, status, created_at')
-        .eq('doctor_id', sess.userId)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (cases) {
-        const mapped: CaseNotification[] = cases.map(c => ({
-          id: c.id,
-          title: c.is_urgent ? '🚨 Urgent Case' : 'Case Assigned',
-          message: `${c.patient_name}: Tooth ${c.tooth_number} — ${c.diagnosis}`,
-          type: c.is_urgent ? 'urgent' : 'info',
-          time: new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        }));
-        setCaseNotifs(mapped);
-      }
+      // We only want to display incomplete case warnings, not general assigned cases.
+      setCaseNotifs([]);
 
       // Fetch uncompleted cases with a long gap (older than 3 days, and status != completed)
       const thresholdDate = new Date();
