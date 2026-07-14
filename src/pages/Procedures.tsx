@@ -194,6 +194,8 @@ ${fileAnalysis ? `Clinical Files/Radiograph Analysis: ${fileAnalysis}` : ""}
       if (data) setCases(data);
     };
     fetchCases();
+    const interval = setInterval(fetchCases, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   // Reset workflow when selection changes

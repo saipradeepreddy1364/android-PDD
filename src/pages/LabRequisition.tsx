@@ -98,7 +98,7 @@ const LabRequisition = () => {
       }
 
       if (caseId) {
-        setLoading(true);
+        if (loading) setLoading(true);
         const { data: caseData } = await supabase
           .from("cases")
           .select("*")
@@ -113,6 +113,8 @@ const LabRequisition = () => {
       }
     };
     fetchData();
+    const interval = setInterval(fetchData, 5000);
+    return () => clearInterval(interval);
   }, [caseId]);
 
   // ── When procedure changes, reset subtype & steps ─────────────────────────

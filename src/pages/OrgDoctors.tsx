@@ -13,8 +13,8 @@ const OrgDoctors = () => {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const fetchDoctors = async () => {
-    setLoading(true);
+  const fetchDoctors = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
     
@@ -31,11 +31,13 @@ const OrgDoctors = () => {
         setDoctors(data);
       }
     }
-    setLoading(false);
+    if (showLoading) setLoading(false);
   };
 
   useEffect(() => {
-    fetchDoctors();
+    fetchDoctors(true);
+    const interval = setInterval(() => fetchDoctors(false), 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleBlockDoctor = async (doctorId: string, currentStatus: string) => {

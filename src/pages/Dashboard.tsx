@@ -56,7 +56,6 @@ const Dashboard = () => {
       } else if (userRole === 'lab') {
         navigation.replace("LabDashboard");
       }
-      return;
     }
 
     const fetchData = async () => {
@@ -129,6 +128,8 @@ const Dashboard = () => {
     };
 
     fetchData();
+    const interval = setInterval(fetchData, 5000);
+    return () => clearInterval(interval);
   }, [isPreloaded]);
 
   if (loading) {

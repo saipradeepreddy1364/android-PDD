@@ -66,6 +66,8 @@ const OrgReports = () => {
     };
 
     fetchAllOrgFiles();
+    const interval = setInterval(fetchAllOrgFiles, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const filteredFiles = files.filter(f => 

@@ -29,6 +29,8 @@ const OrgCases = () => {
     };
 
     fetchCases();
+    const interval = setInterval(fetchCases, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const filteredCases = cases.filter(c => 

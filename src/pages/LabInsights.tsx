@@ -16,7 +16,8 @@ const LabInsights = () => {
     urgent: 0,
   });
 
-  const fetchInsights = async () => {
+  const fetchInsights = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -43,7 +44,7 @@ const LabInsights = () => {
             total: allCases.length,
             pending: allCases.filter(c => c.status === 'lab-pending').length,
             inProduction: allCases.filter(c => c.status === 'lab-received').length,
-            completed: allCases.filter(c => c.status === 'completed').length,
+            completed: allCases.filter(c => c.completed).length,
             urgent: allCases.filter(c => c.is_urgent).length,
           };
           setStats(statsObj);
@@ -52,12 +53,14 @@ const LabInsights = () => {
     } catch (err) {
       console.error("Error loading lab insights:", err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchInsights();
+    fetchInsights(true);
+    const interval = setInterval(() => fetchInsights(false), 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const filteredReports = cases.filter(c =>
