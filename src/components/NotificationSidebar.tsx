@@ -31,6 +31,7 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
   const insets = useSafeAreaInsets();
   const [pendingDoctors, setPendingDoctors] = useState<PendingDoctor[]>([]);
   const [caseNotifs, setCaseNotifs] = useState<CaseNotification[]>([]);
+  const [caseWarnings, setCaseWarnings] = useState<CaseNotification[]>([]);
   const [labPendingCases, setLabPendingCases] = useState<any[]>([]);
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
@@ -107,6 +108,34 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
           time: new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         }));
         setCaseNotifs(mapped);
+      }
+
+      // Fetch uncompleted cases with a long gap (older than 3 days, and status != completed)
+      const thresholdDate = new Date();
+      thresholdDate.setDate(thresholdDate.getDate() - 3);
+
+      const { data: warningCases } = await supabase
+        .from('cases')
+        .select('id, patient_name, tooth_number, diagnosis, is_urgent, status, created_at')
+        .eq('doctor_id', sess.userId)
+        .neq('status', 'completed')
+        .lt('created_at', thresholdDate.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (warningCases) {
+        const mappedWarnings: CaseNotification[] = warningCases.map(c => {
+          const daysGap = Math.max(1, Math.floor((Date.now() - new Date(c.created_at).getTime()) / (24 * 60 * 60 * 1000)));
+          return {
+            id: c.id,
+            title: `⚠️ Unresolved Case (${daysGap}d gap)`,
+            message: `${c.patient_name}: Tooth ${c.tooth_number} has been incomplete for ${daysGap} days.`,
+            type: "urgent",
+            time: `${daysGap} days ago`,
+          };
+        });
+        setCaseWarnings(mappedWarnings);
+      } else {
+        setCaseWarnings([]);
       }
     }
   };
@@ -195,7 +224,7 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
     return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
   };
 
-  const totalCount = pendingDoctors.length + caseNotifs.length + labPendingCases.length;
+  const totalCount = pendingDoctors.length + caseNotifs.length + labPendingCases.length + caseWarnings.length;
 
   return (
     <SheetContent open={open} onOpenChange={onOpenChange} side="right" style={[styles.sheetContent, isDark && styles.sheetContentDark]}>
@@ -212,7 +241,7 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
             View your recent clinical updates and alerts.
           </SheetDescription>
         </View>
-        <TouchableOpacity onPress={() => { setPendingDoctors([]); setCaseNotifs([]); }}>
+        <TouchableOpacity onPress={() => { setPendingDoctors([]); setCaseNotifs([]); setCaseWarnings([]); }}>
           <Text style={styles.clearAll}>Clear all</Text>
         </TouchableOpacity>
       </SheetHeader>
@@ -346,6 +375,34 @@ export const NotificationSidebar = ({ open, onOpenChange }: { open: boolean; onO
                         <CheckCircle2 size={13} color="#FFFFFF" />
                         <Text style={styles.approveBtnText}>Accept &amp; Begin</Text>
                       </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </>
+            )}
+
+            {/* Case Warnings (doctors) */}
+            {caseWarnings.length > 0 && (
+              <>
+                <View style={[styles.sectionLabel, isDark && styles.sectionLabelDark, { borderTopWidth: 1, borderTopColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
+                  <Text style={[styles.sectionLabelText, isDark && styles.sectionLabelTextDark, { color: '#EF4444' }]}>
+                    ⚠️ INCOMPLETE CASE WARNINGS · {caseWarnings.length}
+                  </Text>
+                </View>
+                {caseWarnings.map((w) => (
+                  <View
+                    key={w.id}
+                    style={[styles.caseItem, isDark && styles.caseItemDark, { backgroundColor: isDark ? '#1C1010' : '#FEF2F2' }]}
+                  >
+                    <View style={[styles.iconContainer, styles.urgentIcon]}>
+                      <AlertTriangle size={16} color="#EF4444" />
+                    </View>
+                    <View style={styles.caseContent}>
+                      <View style={styles.itemHeader}>
+                        <Text style={[styles.itemTitle, isDark && styles.itemTitleDark, { color: '#EF4444' }]} numberOfLines={1}>{w.title}</Text>
+                        <Text style={styles.time}>{w.time}</Text>
+                      </View>
+                      <Text style={[styles.message, isDark && styles.messageDark]} numberOfLines={2}>{w.message}</Text>
                     </View>
                   </View>
                 ))}
