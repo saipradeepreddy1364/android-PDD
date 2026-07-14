@@ -60,6 +60,15 @@ const Insights = () => {
     { label: "Completed Cases", value: metrics.completed.toString(), icon: Target, color: "#10B981" },
   ];
 
+  const completionRate = metrics.total > 0 ? Math.round((metrics.completed / metrics.total) * 100) : 0;
+  
+  let rankingText = "Complete more cases to unlock your regional clinical ranking.";
+  if (metrics.completed >= 5) {
+    rankingText = "You are currently ranked in the top 10% of clinicians in your region.";
+  } else if (metrics.completed >= 2) {
+    rankingText = "You are currently ranked in the top 25% of clinicians in your region.";
+  }
+
   return (
     <AppLayout>
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -85,10 +94,9 @@ const Insights = () => {
 
         <View style={styles.heroCard}>
           <View style={styles.heroContent}>
-            <Text style={styles.heroTitle}>Clinical Guide Impact</Text>
+            <Text style={styles.heroTitle}>Clinical Guide Impact: {completionRate}% Completed</Text>
             <Text style={styles.heroText}>
-              Your use of the Clinical Guide has grown significantly.
-              You are currently ranked in the top 10% of clinicians in your region.
+              Your case completion rate is {completionRate}%. {rankingText}
             </Text>
             <TouchableOpacity 
               style={styles.heroButton}
