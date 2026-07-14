@@ -98,6 +98,8 @@ export default defineConfig(({ mode }) => ({
       "expo-device": path.resolve(__dirname, "./src/lib/expo-mock.ts"),
       "expo-modules-core": path.resolve(__dirname, "./src/lib/expo-mock.ts"),
       "expo-document-picker": path.resolve(__dirname, "./src/lib/expo-document-picker-mock.ts"),
+      "react-native-url-polyfill/auto": path.resolve(__dirname, "./src/lib/url-polyfill-mock.ts"),
+      "react-native-url-polyfill": path.resolve(__dirname, "./src/lib/url-polyfill-mock.ts"),
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },
