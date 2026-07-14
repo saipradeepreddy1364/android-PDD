@@ -3,8 +3,9 @@ import { View, StyleSheet, Image, Platform } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { supabase } from "@/lib/supabase";
 import { useAppData } from "@/lib/AppDataContext";
+import APP_LOGO from "../assets/logo.png";
 
-const APP_LOGO = require("../assets/logo.png");
+const logoSource = typeof APP_LOGO === 'string' ? { uri: APP_LOGO } : APP_LOGO;
 
 const SplashScreen = () => {
   const navigation = useNavigation<any>();
@@ -115,7 +116,7 @@ const SplashScreen = () => {
     <View style={styles.container}>
       <View style={styles.logoWrapper}>
         <Image 
-          source={APP_LOGO}
+          source={logoSource as any}
           style={styles.logo}
           resizeMode="contain"
         />

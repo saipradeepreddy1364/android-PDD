@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Image, Platform } from "react-native";
-
-const APP_LOGO = require("../assets/logo.png");
+import APP_LOGO from "../assets/logo.png";
 import { supabase } from "@/lib/supabase";
 import { Clock, AlertCircle, LogOut, CheckCircle } from "lucide-react-native";
+
+const logoSource = typeof APP_LOGO === 'string' ? { uri: APP_LOGO } : APP_LOGO;
 
 export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(false);
@@ -119,7 +120,7 @@ export const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
       <View style={styles.splashContainer}>
         <View style={styles.logoWrapper}>
           <Image 
-            source={APP_LOGO}
+            source={logoSource as any}
             style={styles.logo}
             resizeMode="contain"
           />
