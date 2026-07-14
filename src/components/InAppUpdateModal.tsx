@@ -10,7 +10,7 @@ export const InAppUpdateModal = () => {
 
   useEffect(() => {
     // Only check if updates are enabled in this build (e.g. in built APK/IPAs, not in local Metro dev or Web)
-    if (!Updates.isEnabled || Platform.OS === "web") return;
+    if (Platform.OS === "web" || !Updates || !Updates.isEnabled) return;
 
     const checkUpdates = async () => {
       try {
