@@ -34,7 +34,7 @@ type Tab = {
 const doctorTabs: Tab[] = [
   { name: "Dashboard", label: "Home", icon: LayoutDashboard },
   { name: "NewCase", label: "New", icon: FilePlus2 },
-  { name: "AIEngine", label: "Steps", icon: ListChecks, primary: true },
+  { name: "Procedures", label: "Procedures", icon: ListChecks, primary: true },
   { name: "Patients", label: "Records", icon: Users },
   { name: "Insights", label: "Insights", icon: BarChart3 },
 ];

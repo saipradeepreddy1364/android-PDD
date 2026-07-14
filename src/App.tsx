@@ -20,7 +20,7 @@ import OrgCases from "./pages/OrgCases";
 import OrgReports from "./pages/OrgReports";
 import OrgDoctors from "./pages/OrgDoctors";
 import NewCase from "./pages/NewCase";
-import AIEngine from "./pages/AIEngine";
+import Procedures from "./pages/Procedures";
 import LabRequisition from "./pages/LabRequisition";
 import Patients from "./pages/Patients";
 import PatientDetail from "./pages/PatientDetail";
@@ -85,7 +85,7 @@ const App = () => {
                 <Stack.Screen name="OrgReports" component={OrgReports} />
                 <Stack.Screen name="OrgDoctors" component={OrgDoctors} />
                 <Stack.Screen name="NewCase" component={NewCase} />
-                <Stack.Screen name="AIEngine" component={AIEngine} />
+                <Stack.Screen name="Procedures" component={Procedures} />
                 <Stack.Screen name="LabRequisition" component={LabRequisition} />
                 <Stack.Screen name="Patients" component={Patients} />
                 <Stack.Screen name="PatientDetail" component={PatientDetail} />

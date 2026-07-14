@@ -31,7 +31,7 @@ import {
   type WorkflowResponse,
 } from "@/lib/backendApi";
 
-const AIEngine = () => {
+const Procedures = () => {
   // ── Patient case ──────────────────────────────────────────────────────────
   const [cases, setCases] = useState<any[]>([]);
   const [selectedCase, setSelectedCase] = useState<any>(null);
@@ -1394,4 +1394,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AIEngine;
+export default Procedures;

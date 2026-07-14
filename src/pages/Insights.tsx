@@ -6,10 +6,12 @@ import {
   Activity,
   Target
 } from "lucide-react-native";
+import { useNavigation } from "@react-navigation/native";
 import { supabase } from "@/lib/supabase";
 import AppLayout from "@/components/AppLayout";
 
 const Insights = () => {
+  const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState({
     total: 0,
@@ -88,7 +90,10 @@ const Insights = () => {
               Your use of the Clinical Guide has grown significantly.
               You are currently ranked in the top 10% of clinicians in your region.
             </Text>
-            <TouchableOpacity style={styles.heroButton}>
+            <TouchableOpacity 
+              style={styles.heroButton}
+              onPress={() => navigation.navigate("Procedures")}
+            >
               <Text style={styles.heroButtonText}>View Detailed Report</Text>
             </TouchableOpacity>
           </View>
